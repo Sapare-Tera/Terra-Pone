@@ -382,8 +382,6 @@ namespace PavonisInteractive.TerraInvicta
         }
     }
 
-
-
     public class patch_TICouncilorState : TICouncilorState
     {
         public CouncilorAugmentationOption Addmagic(patch_TITraitTemplate trait)
@@ -994,9 +992,6 @@ namespace PavonisInteractive.TerraInvicta
             }
         };
     }
-
-
-
 
     public class patch_TIGlobalResearchState : TIGlobalResearchState
     {

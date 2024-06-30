@@ -10,9 +10,115 @@ using FullSerializer;
 using Unity.Entities;
 using System.Security.AccessControl;
 using Mono.Cecil;
+using PavonisInteractive.TerraInvicta.Actions;
+using PavonisInteractive.TerraInvicta.Entities;
 
 namespace PavonisInteractive.TerraInvicta
 {
+    public class patch_TIMissionPhaseState : TIMissionPhaseState
+    {
+        private void StartofTurnBookkeeping()
+        {
+            foreach (TINationState tinationState in GameStateManager.AllExtantNations())
+            {
+                tinationState.UpdateControlPointStatus();
+                tinationState.UpdateNativeControlPointsCount();
+                tinationState.UpdateArmiesControllingFactions();
+                tinationState.ClearAdvisingCouncilors();
+            }
+            foreach (TIHabState tihabState in GameStateManager.IterateByClass<TIHabState>(false))
+            {
+                tihabState.UpdateDefendHabStatus();
+                tihabState.ClearAdvisingCouncilors();
+            }
+            foreach (TIFactionState tifactionState in GameStateManager.AllFactions())
+            {
+                tifactionState.ActivateCouncilorOrgs();
+                foreach (TICouncilorState ticouncilorState in tifactionState.councilors)
+                {
+                    ticouncilorState.RecordLocation();
+                    ticouncilorState.EndProtectionOfTarget();
+                }
+            }
+            TIFactionState[] array = GameStateManager.AllFactions();
+            for (int i = 0; i < array.Length; i++)
+            {
+                foreach (TICouncilorState ticouncilorState2 in from x in array[i].councilors
+                                                               orderby x.SumMissionRelevantAttributes() descending
+                                                               select x)
+                {
+                    if (ticouncilorState2.repeatOrder)
+                    {
+                        if (ticouncilorState2.CanRepeatMission(ticouncilorState2.completedMission))
+                        {
+                            ticouncilorState2.faction.playerControl.StartAction(new AssignCouncilorToMission(ticouncilorState2, ticouncilorState2.completedMission.missionTemplate, ticouncilorState2.completedMission.target, ticouncilorState2.completedMission.resources, false));
+                        }
+                        else
+                        {
+                            ticouncilorState2.SetPermanentAssignment(false);
+                        }
+                    }
+                    else if (ticouncilorState2.permanentDefenseMode)
+                    {
+                        ticouncilorState2.SelectPermanentDefenseModeMission();
+                    }
+                    bool flag = false;
+                    TIMissionState completedMission = ticouncilorState2.completedMission;
+                    
+                    if (completedMission.missionTemplate.dataName == "Advise_Statesman")
+                    {
+                        
+                        double Attribute = ticouncilorState2.GetAttribute(CouncilorAttribute.Administration);
+                        Log.Debug($"Initial Attribute {Attribute}");
+                        Attribute = Attribute * 0.333;
+                        Log.Debug($"The Deductions {Attribute}");
+                        Attribute = Math.Round(Attribute);
+                        Log.Debug($"The rounded {Attribute}");
+                        ticouncilorState2.ModifyAttribute(CouncilorAttribute.Administration, (int)-Attribute);
+                        Log.Debug($"Final Attribute {ticouncilorState2.GetAttribute(CouncilorAttribute.Administration)}");
+                    }
+
+                    if (completedMission.missionTemplate.dataName == "Advise_Scientist")
+                    {
+                        double Attribute = ticouncilorState2.GetAttribute(CouncilorAttribute.Science);
+                        Attribute = Attribute * 0.333;
+                        Attribute = Math.Round(Attribute);
+                        ticouncilorState2.ModifyAttribute(CouncilorAttribute.Science, -(int)Attribute);
+                    }
+
+                    if (completedMission.missionTemplate.dataName == "Advise_Super")
+                    {
+                        double Attribute2 = ticouncilorState2.GetAttribute(CouncilorAttribute.Administration);
+                        Attribute2 = Attribute2 * 0.333;
+                        Attribute2 = Math.Round(Attribute2);
+                        ticouncilorState2.ModifyAttribute(CouncilorAttribute.Administration, -(int)Attribute2);
+                        double Attribute = ticouncilorState2.GetAttribute(CouncilorAttribute.Science);
+                        Attribute = Attribute * 0.333;
+                        Attribute = Math.Round(Attribute);
+                        ticouncilorState2.ModifyAttribute(CouncilorAttribute.Science, -(int)Attribute);
+                    }
+
+                    if (completedMission != null && completedMission.missionTemplate.persistentEffect)
+                    {
+                        flag = true;
+                    }
+                    ticouncilorState2.ClearCompletedMission();
+                    ticouncilorState2.SetCompletedMission(null);
+                    if (flag)
+                    {
+                        GameControl.eventManager.TriggerEvent(new CouncilorMissionUpdated(ticouncilorState2, null), null, new object[]
+                        {
+                            this,
+                            ticouncilorState2.faction,
+                            ticouncilorState2.location,
+                            ticouncilorState2.ref_nation
+                        }.Where((object x) => x != null).ToArray<object>());
+                    }
+                }
+            }
+            GameStateManager.NotificationQueue().CleanSummaryQueue(false);
+        }
+    }
     public class patch_TINationState : TINationState
     {
         public static float MeanAnnualGDPDamage(float tempAnomaly_C, float inequality)
@@ -139,13 +245,13 @@ namespace PavonisInteractive.TerraInvicta
             foreach (patch_TIControlPoint ticontrolPoint in this.controlPoints)
             {
                 float num = 0f + (float)this.currentMagicRegions;
-                Log.Debug($"control1 {control}");
+               // Log.Debug($"control1 {control}");
                 if (ticontrolPoint.faction != null && !ticontrolPoint.benefitsDisabled)
                 {
-                    Log.Debug($"Num1 {num}");
-                    Log.Debug($"control2 {control}");
+                   // Log.Debug($"Num1 {num}");
+                   // Log.Debug($"control2 {control}");
                     num /= control;
-                    Log.Debug($"Num2 {num}");
+                   // Log.Debug($"Num2 {num}");
                     ticontrolPoint.faction.AddToCurrentResource(num, patch_FactionResource.Magic, false);
                     //ticontrolPoint.faction.thisWeeksCumulativeSpoils += num;
                 }

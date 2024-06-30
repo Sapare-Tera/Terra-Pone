@@ -135,6 +135,7 @@ namespace PavonisInteractive.TerraInvicta
         //[MonoModIgnore] private Dictionary<TechCategory, int> fleetsModifierCachedFrame = Enums.TechCategories.ToDictionary((TechCategory x) => x, (TechCategory x) => -1);
         //[SerializeField]
 
+
         public TradeOffer GetAIGiveOffer(patch_TIFactionState offerReciever, patch_TIFactionState offerSender, TradeOffer decidedWantOffer)
 		{
 			bool flag = !offerReciever.isActivePlayer && !offerSender.isActivePlayer;
@@ -551,11 +552,27 @@ namespace PavonisInteractive.TerraInvicta
             return result;
         }
 
+
+        public List<TICouncilorState> advisingCouncilors { get; private set; }
+        public void AddAdvisingCouncilor(TICouncilorState councilor)
+        {
+            this.advisingCouncilors.Add(councilor);
+        }
+        public float GetAdvisers()
+        {
+            if (this.advisingCouncilors.Count > 0)
+            {
+                float num = this.advisingCouncilors.Count;
+                return num;
+            }
+            return 0f;
+        }
+
         public float GetControlPointMaintenanceFreebieCap()
         {
             if (!this.IsAlienFaction)
             {
-                return (float)(TIGlobalValuesState.GlobalValues.controlPointMaintenanceFreebies + (this.isActivePlayer ? 0 : TIGlobalValuesState.GlobalValues.scenarioCustomizations.controlPointMaintenanceFreebieBonusAI) + this.activeCouncilors.Sum((TICouncilorState x) => x.GetAttribute(CouncilorAttribute.Security, true, true, true, false)) + this.activeCouncilors.Sum((TICouncilorState x) => x.GetAttribute(CouncilorAttribute.Security, true, true, true, false)) + this.habs.Sum((TIHabState x) => x.controlPointCapacityValue)) - TIEffectsState.SumEffectsModifiers(Context.ControlPointMaintenance, this, (float)TIGlobalValuesState.GlobalValues.controlPointMaintenanceFreebies);
+                return (float)(TIGlobalValuesState.GlobalValues.controlPointMaintenanceFreebies + (this.isActivePlayer ? 0 : TIGlobalValuesState.GlobalValues.scenarioCustomizations.controlPointMaintenanceFreebieBonusAI) + this.activeCouncilors.Sum((TICouncilorState x) => x.GetAttribute(CouncilorAttribute.Security, true, true, true, false)*2) + this.habs.Sum((TIHabState x) => x.controlPointCapacityValue)) - TIEffectsState.SumEffectsModifiers(Context.ControlPointMaintenance, this, (float)TIGlobalValuesState.GlobalValues.controlPointMaintenanceFreebies);
             }
             return 20000f;
         }

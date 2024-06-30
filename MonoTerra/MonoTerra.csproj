@@ -31,16 +31,17 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Notifications in Namespace.cs" />
+    <Compile Include="Solos\Missions.cs" />
+    <Compile Include="Namespace\Notifications in Namespace.cs" />
     <Compile Include="factiongoal_nations.cs" />
-    <Compile Include="MagicResource.cs" />
+    <Compile Include="Solos\MagicResource.cs" />
     <Compile Include="MapRegionTemplate.cs" />
-    <Compile Include="Solos.cs" />
-    <Compile Include="namespace.cs" />
+    <Compile Include="Solos\Solos.cs" />
+    <Compile Include="Namespace\namespace.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TIArmyState in Namespace.cs" />
-    <Compile Include="TiFactionstate.cs" />
-    <Compile Include="TiNationstate.cs" />
+    <Compile Include="Namespace\TIArmyState in Namespace.cs" />
+    <Compile Include="Namespace\TiFactionstate.cs" />
+    <Compile Include="Namespace\TiNationstate.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="0Harmony, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -119,7 +120,6 @@
     <None Include="..\.editorconfig">
       <Link>.editorconfig</Link>
     </None>
-    <None Include="NotifcationsNamespace" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
