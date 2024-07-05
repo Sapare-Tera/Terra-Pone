@@ -20,7 +20,10 @@ public class patch_TIGlobalConfig : TIGlobalConfig
     public bool skipIntro;
     public float TIMissionModifier_ControlPointUnder_Multiplier;
     public string pathGeoscapeMagicResource1;
+    public string pathTeleportRegion1;
     public string MagicResourceInlineSpritePath;
+    public string TeleportRegionInlineSpritePath;
+    public string TeleportRegionSpritePath;
     public float priority_MAG;
     public string pathMagicScienceIcon;
     public string MagicScienceInlineSpritePath;
@@ -48,13 +51,18 @@ public class patch_TIGlobalConfig : TIGlobalConfig
     {
         orig_TIGlobalConfig();
 
-    pathGeoscapeMagicResource1 = "c_mapicons/ICO_geoscape_Magical_resource";
+        pathGeoscapeMagicResource1 = "c_mapicons/ICO_geoscape_Magical_resource";
+
+        pathTeleportRegion1 = "c_mapicons/ICO_geoscape_Magical_resource";
+
+        TeleportRegionSpritePath = "<color=#9F2B68FF><sprite tint=1 name=\"education\"></color>";
 
         MagicResourceInlineSpritePath = "<color=#9F2B68FF><sprite tint=1 name=\"education\"></color>";
 
         MagicScienceInlineSpritePath = "<color=#9F2B68FF><sprite tint=1 name=\"education\"></color>";
 
         MagicInlineSpritePath = "<color=#9F2B68FF><sprite tint=1 name=\"education\"></color>";
+
 
         pathMagicScienceIcon = "c_icons_2d/magic_tech_icon";
 
@@ -148,6 +156,8 @@ public class patch_TIGlobalConfig : TIGlobalConfig
 public class patch_TIRegionTemplate : TIRegionTemplate
 {
     public bool? magic;
+
+    public bool? Teleport;
 }
 
 
@@ -161,7 +171,7 @@ namespace PavonisInteractive.TerraInvicta
         public void UpdateRegionStatusMarker()
         {
             patch_TIRegionState region_VLC = region as patch_TIRegionState;
-            bool flag = base.region.coreEconomicRegion || base.region.resourceRegion || region_VLC.MagicResource;
+            bool flag = base.region.coreEconomicRegion || base.region.resourceRegion || region_VLC.MagicResource || region_VLC.TeleportRegion;
             this.regionStatusMarker = base.container.ManageMarkerStack(this.regionStatusMarker, !flag, MarkerType.RegionalStatusIcon, base.region, "regionStatusMarker", -1);
             if (flag)
             {
@@ -171,6 +181,13 @@ namespace PavonisInteractive.TerraInvicta
                     this.regionStatusMarker.SetCentralIcon(patch_AssetCacheManager.GeoscapeMagicResource1);
                     base.container.InitializeGeoscapeModel(this.regionStatusMarker, "3dEarthmodels/geoscape_core_resources");
                     this.regionStatusMarker.SetTooltip(() => Loc.T("UI.Markers.MagicResourceRegion"));
+                    return;
+                }
+                if (region_VLC.TeleportRegion)
+                {
+                    this.regionStatusMarker.SetCentralIcon(patch_AssetCacheManager.GeoscapeMagicResource1);
+                    base.container.InitializeGeoscapeModel(this.regionStatusMarker, "3dEarthmodels/geoscape_core_resources");
+                    this.regionStatusMarker.SetTooltip(() => Loc.T("UI.Markers.RegionTeleporterRegion"));
                     return;
                 }
                 if (base.region.coreEconomicRegion)
@@ -203,65 +220,31 @@ namespace PavonisInteractive.TerraInvicta
     {
 
         public static readonly Sprite GeoscapeMagicResource1 = GameControl.assetLoader.LoadAsset<Sprite>(patch_TemplateManager.global_PVC.pathGeoscapeMagicResource1);
+        public static readonly Sprite GeoscapeTeleportRegion1 = GameControl.assetLoader.LoadAsset<Sprite>(patch_TemplateManager.global_PVC.pathTeleportRegion1);
     }
 
     public class patch_TIRegionState : TIRegionState
     {
-
         public bool MagicResource;
 
-        public EnvironmentType environment = EnvironmentType.Standard;
+        public bool TeleportRegion;
 
-        public void ChangeEnvType(EnvironmentType newEnvType)
-        {
-            this.environment = newEnvType;
-        }
-        //public static IEnumerable<patch_TIRegionState> Regions
-        //{
-        //    get
-        //    {
-        //        return (IEnumerable<patch_TIRegionState>)GameStateManager.AllRegions();
-        //    }
-        //}
 
-        public IEnumerable<TIRegionState> ConnectedRegions
+        public bool isMagic
         {
             get
             {
-                IEnumerable<TIRegionState> enumerable = this.Neighbors;
-                if (this.onTheWater)
-                {
-                    enumerable = enumerable.Union(patch_TIRegionState.CoastalRegions);
-                }
-                //if (this.MagicResource)
-                //{
-                //    enumerable = enumerable.Union(patch_TIRegionState.TeleportRegions);
-                //}
-                //Log.Debug($"A {this.MagicResource}");
-                //Log.Debug($"B {this.oceanType}");
-                return enumerable;
+                return this.MagicResource;
             }
         }
 
-        public static IEnumerable<TIRegionState> TeleportRegions
+        public bool isTeleport
         {
             get
             {
-                return from x in patch_TIRegionState.Regions
-                       where x.onTheWater
-                       select x;
+                return this.TeleportRegion;
             }
         }
-
-        //public bool isTeleport
-        //{
-        //    get
-        //    {
-        //        return this.oceanType == patch_WorldOceanType.Teleport;
-        //    }
-        //}
-
-
 
         public extern void orig_InitWithTemplate(TIDataTemplate template);
         public override void InitWithTemplate(TIDataTemplate template)
@@ -270,6 +253,7 @@ namespace PavonisInteractive.TerraInvicta
             patch_TIRegionTemplate template_PVC = template as patch_TIRegionTemplate;
 
             this.MagicResource = template_PVC.magic.GetValueOrDefault();
+            this.TeleportRegion = template_PVC.Teleport.GetValueOrDefault();
 
             orig_InitWithTemplate(template);
         }
@@ -321,6 +305,10 @@ namespace PavonisInteractive.TerraInvicta
             if (this.MagicResource)
             {
                 stringBuilder.Append(patch_TemplateManager.global_PVC.MagicResourceInlineSpritePath);
+            }
+            if (this.TeleportRegion)
+            {
+                stringBuilder.Append(patch_TemplateManager.global_PVC.TeleportRegionSpritePath);
             }
             if (this.colonyRegion)
             {
@@ -396,6 +384,10 @@ namespace PavonisInteractive.TerraInvicta
             if (region_VLC.MagicResource)
             {
                 stringBuilder.Append(patch_TemplateManager.global_PVC.MagicResourceInlineSpritePath).Append(Loc.T("UI.Nation.RegionMagicResource")).AppendLine().AppendLine();
+            }
+            if (region_VLC.TeleportRegion)
+            {
+                stringBuilder.Append(patch_TemplateManager.global_PVC.TeleportRegionSpritePath).Append(Loc.T("UI.Nation.RegionTeleporter")).AppendLine().AppendLine();
             }
             if (region.resourceRegion)
             {

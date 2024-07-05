@@ -15,33 +15,368 @@ using PavonisInteractive.TerraInvicta.UI;
 using static PavonisInteractive.TerraInvicta.Audio.SoundEvents;
 using PavonisInteractive.TerraInvicta.Entities;
 using UnityEngine.UI;
+using PavonisInteractive.TerraInvicta.Systems.GameTime;
 
+public abstract class patch_TIOperationTemplate : TIOperationTemplate, IOperation
+{
+    public string operationIconImagePath
+    {
+        get
+        {
+            string starter;
+            string name = GetType().Name;
+            switch (name)
+            {
+                case "TeleportArmyOperation":
+                    starter = "c_operations/ICO_";
+                    break;
+                default:
+                    starter = "operations/ICO_";
+                    break;
+            }
+            return new StringBuilder(starter).Append(name).ToString();
+        }
+    }
+}
 
-//public class patch_TISpaceShipTemplate : TISpaceShipTemplate
+    public static class OperationsManager
+{
+    public static void Initalize()
+    {
+        OperationsManager.armyOperations.Clear();
+        OperationsManager.fleetOperations.Clear();
+        OperationsManager.spaceOperations.Clear();
+        OperationsManager.nationOperations.Clear();
+        OperationsManager.operationsLookup.Clear();
+        OperationsManager.armyOperations.Add(new TeleportArmyOperation());
+        OperationsManager.armyOperations.Add(new DeployArmyOperation(false));
+        OperationsManager.armyOperations.Add(new DeployArmiesOperation(false));
+        OperationsManager.armyOperations.Add(new ArmyGoHomeOperation());
+        OperationsManager.armyOperations.Add(new AllArmiesGoHomeOperation());
+        OperationsManager.armyOperations.Add(new AssaultAlienAssetOperation());
+        OperationsManager.armyOperations.Add(new AssaultSpaceFacilityOperation());
+        OperationsManager.armyOperations.Add(new AnnexRegionOperation());
+        OperationsManager.armyOperations.Add(new RazeRegionOperation());        
+        OperationsManager.armyOperations.Add(new CancelArmyOperation());
+        OperationsManager.fleetOperations.Add(new TransferOperation());
+        OperationsManager.fleetOperations.Add(new BombardOperation_Low());
+        OperationsManager.fleetOperations.Add(new BombardOperation_Med());
+        OperationsManager.fleetOperations.Add(new BombardOperation_High());
+        OperationsManager.fleetOperations.Add(new AssaultHabOperation());
+        OperationsManager.fleetOperations.Add(new DestroyHabOperation());
+        OperationsManager.fleetOperations.Add(new MergeFleetOperation());
+        OperationsManager.fleetOperations.Add(new MergeAllFleetOperation());
+        OperationsManager.fleetOperations.Add(new SplitFleetOperation());
+        OperationsManager.fleetOperations.Add(new ResupplyAndRepairOperation());
+        OperationsManager.fleetOperations.Add(new ResupplyOperation());
+        OperationsManager.fleetOperations.Add(new RepairFleetOperation());
+        OperationsManager.fleetOperations.Add(new InterfleetRefuelOperation());
+        OperationsManager.fleetOperations.Add(new LandOnSurfaceOperation());
+        OperationsManager.fleetOperations.Add(new LaunchFromSurfaceOperation());
+        OperationsManager.fleetOperations.Add(new UndockFromStationOperation());
+        OperationsManager.fleetOperations.Add(new SurveyPlanetFromFleetOperation());
+        OperationsManager.fleetOperations.Add(new FoundSolarPlatformOperation());
+        OperationsManager.fleetOperations.Add(new FoundFissionPlatformOperation());
+        OperationsManager.fleetOperations.Add(new FoundFusionPlatformOperation());
+        OperationsManager.fleetOperations.Add(new FoundSolarOutpostOperation());
+        OperationsManager.fleetOperations.Add(new FoundFissionOutpostOperation());
+        OperationsManager.fleetOperations.Add(new FoundFusionOutpostOperation());
+        OperationsManager.fleetOperations.Add(new FoundAutomatedSolarPlatformOperation());
+        OperationsManager.fleetOperations.Add(new FoundAutomatedFissionPlatformOperation());
+        OperationsManager.fleetOperations.Add(new FoundAutomatedSolarOutpostOperation());
+        OperationsManager.fleetOperations.Add(new FoundAutomatedFissionOutpostOperation());
+        OperationsManager.fleetOperations.Add(new ScuttleShipsOperation());
+        OperationsManager.fleetOperations.Add(new SetHomeportOperation());
+        OperationsManager.fleetOperations.Add(new ClearHomeportOperation());
+        OperationsManager.fleetOperations.Add(new AlienEarthSurveillanceOperation());
+        OperationsManager.fleetOperations.Add(new AlienCrashdownOperation());
+        OperationsManager.fleetOperations.Add(new AlienLandArmyOperation());
+        OperationsManager.fleetOperations.Add(new CancelFleetOperation());
+        OperationsManager.spaceOperations.Add(new LaunchProbeOperation());
+        OperationsManager.spaceOperations.Add(new FoundPlatformOperation());
+        OperationsManager.spaceOperations.Add(new FoundOrbitalOperation());
+        OperationsManager.spaceOperations.Add(new FoundRingOperation());
+        OperationsManager.spaceOperations.Add(new FoundOutpostOperation());
+        OperationsManager.spaceOperations.Add(new FoundSettlementOperation());
+        OperationsManager.spaceOperations.Add(new FoundColonyOperation());
+        OperationsManager.spaceOperations.Add(new FoundAutomatedPlatformOperation());
+        OperationsManager.spaceOperations.Add(new FoundAutomatedOutpostOperation());
+        OperationsManager.nationOperations.Add(new NuclearWeaponsStrike());
+        foreach (IOperation operation in OperationsManager.armyOperations)
+        {
+            OperationsManager.operationsLookup.Add(operation.GetType(), operation);
+        }
+        foreach (IOperation operation2 in OperationsManager.fleetOperations)
+        {
+            OperationsManager.operationsLookup.Add(operation2.GetType(), operation2);
+        }
+        foreach (IOperation operation3 in OperationsManager.spaceOperations)
+        {
+            OperationsManager.operationsLookup.Add(operation3.GetType(), operation3);
+        }
+        foreach (IOperation operation4 in OperationsManager.nationOperations)
+        {
+            OperationsManager.operationsLookup.Add(operation4.GetType(), operation4);
+        }
+    }
+
+    // Token: 0x04000CE4 RID: 3300
+    public static List<IOperation> armyOperations = new List<IOperation>();
+
+    // Token: 0x04000CE5 RID: 3301
+    public static List<IOperation> fleetOperations = new List<IOperation>();
+
+    // Token: 0x04000CE6 RID: 3302
+    public static List<IOperation> spaceOperations = new List<IOperation>();
+
+    // Token: 0x04000CE7 RID: 3303
+    public static List<IOperation> nationOperations = new List<IOperation>();
+
+    // Token: 0x04000CE8 RID: 3304
+    public static Dictionary<Type, IOperation> operationsLookup = new Dictionary<Type, IOperation>();
+}
+
+//public class ArmyGoHomeOperation : TIArmyOperationTemplate
 //{
-//    public TIResourcesCost earthResourceConstructionCost(TIFactionState faction, TIHabModuleState shipyard)
+//    // Token: 0x06000AA8 RID: 2728 RVA: 0x000365BA File Offset: 0x000347BA
+//    public override OperationTiming GetOperationTiming()
 //    {
-//        TIResourcesCost tiresourcesCost = this.spaceResourceConstructionCost(false, shipyard, true, false, false);
-//        TIResourcesCost tiresourcesCost2 = new TIResourcesCost();
-//        float num = 0f;
-//        float num2 = 0f;
-//        foreach (FactionResource resource in TIResourcesCost.replaceableSpaceResources)
-//        {
-//            num += tiresourcesCost.GetSingleCostValue(resource) * TIGlobalValuesState.GlobalValues.GetPurchaseResourceMarketValue(resource);
-//            num2 += tiresourcesCost.GetSingleCostValue(resource);
-//        }
-//        tiresourcesCost2.AddCost(FactionResource.Money, num, true);
-//        tiresourcesCost2.AddCost(FactionResource.Boost, (float)TISpaceObjectState.GenericTransferBoostFromEarthSurface(faction, shipyard.hab.IsBase ? shipyard.ref_spaceBody : shipyard.ref_orbit, num2 / TemplateManager.global.spaceResourceToTons), true);
-//        foreach (FactionResource factionResource in TIResourcesCost.irreplaceableSpaceResources)
-//        {
-//            tiresourcesCost2.AddCost(factionResource, tiresourcesCost.GetSingleCostValue(factionResource), true);
-//        }
-//        tiresourcesCost2.SetCompletionTime_Days((shipyard == null) ? this.hullTemplate.noShipyardConstructionTime_Days(faction) : (this.hullTemplate.constructionTime_Days(shipyard) + TISpaceObjectState.GenericTransferTime_d(shipyard.ref_faction, GameStateManager.Earth(), shipyard)));
-//        return tiresourcesCost2;
+//        return OperationTiming.DelayedExecutionOfInstantEffect;
 //    }
 
+//    // Token: 0x06000AA9 RID: 2729 RVA: 0x000365BD File Offset: 0x000347BD
+//    public override int SortOrder()
+//    {
+//        return 1;
+//    }
+
+//    // Token: 0x06000AAA RID: 2730 RVA: 0x000365C0 File Offset: 0x000347C0
+//    public override Type GetTargetingMethod()
+//    {
+//        return typeof(TIOperationTargeting_Region);
+//    }
+
+//    // Token: 0x06000AAB RID: 2731 RVA: 0x000365CC File Offset: 0x000347CC
+//    public override bool IsCombatOperation()
+//    {
+//        return false;
+//    }
+
+//    // Token: 0x06000AAC RID: 2732 RVA: 0x000365CF File Offset: 0x000347CF
+//    public override float GetDuration_days(TIGameState actorState, TIGameState target, Trajectory trajectory = null)
+//    {
+//        return 45f;
+//    }
+
+//    // Token: 0x06000AAD RID: 2733 RVA: 0x000365D6 File Offset: 0x000347D6
+//    public override bool OpVisibleToActor(TIGameState actorState, TIGameState targetState = null)
+//    {
+//        return actorState.ref_army.armyType == ArmyType.Human && actorState.ref_army.currentRegion != actorState.ref_army.homeRegion && !actorState.ref_army.atSea;
+//    }
+
+//    // Token: 0x06000AAE RID: 2734 RVA: 0x00036612 File Offset: 0x00034812
+//    public override bool ActorCanPerformOperation(TIGameState actorState, TIGameState target)
+//    {
+//        if (this.OpVisibleToActor(actorState, target) && actorState.ref_army.CurrentOperations().Count == 0)
+//        {
+//            TINationState homeNation = actorState.ref_army.homeNation;
+//            return homeNation != null && homeNation.wars.Count == 0;
+//        }
+//        return false;
+//    }
+
+//    // Token: 0x06000AAF RID: 2735 RVA: 0x00036650 File Offset: 0x00034850
+//    public override List<TIGameState> GetPossibleTargets(TIGameState actorState, TIGameState defaultTarget = null)
+//    {
+//        if (actorState.isArmyState && actorState.ref_army.homeRegion != null)
+//        {
+//            TIArmyState ref_army = actorState.ref_army;
+//            return new List<TIGameState>
+//            {
+//                ref_army.homeRegion.ref_gameState
+//            };
+//        }
+//        return new List<TIGameState>();
+//    }
+
+//    // Token: 0x06000AB0 RID: 2736 RVA: 0x0003669C File Offset: 0x0003489C
+//    public override void ExecuteOperation(TIGameState actorState, TIGameState target)
+//    {
+//        TIArmyState ref_army = actorState.ref_army;
+//        TIRegionState ref_region = target.ref_region;
+//        if (actorState.ref_army.homeNation.wars.Count == 0)
+//        {
+//            ref_army.MoveArmyToRegion(ref_region, false);
+//            TINotificationQueueState.LogArmyArrivesInRegion(ref_army, ref_army.currentRegion);
+//        }
+//    }
 //}
 
+
+
+public class TeleportArmyOperation : TIArmyOperationTemplate
+{    public override OperationTiming GetOperationTiming()
+    {
+        return OperationTiming.DelayedExecutionOfInstantEffect;
+    }
+
+    public override int SortOrder()
+    {
+        return 0;
+    }
+
+    public override Type GetTargetingMethod()
+    {
+        return typeof(TIOperationTargeting_Region);
+    }
+    public override bool IsCombatOperation()
+    {
+        return false;
+    }
+
+    public override float GetDuration_days(TIGameState actorState, TIGameState target, Trajectory trajectory = null)
+    {
+
+        return 5;
+    }
+
+    public static List<TIGameState> GetPossibleTargets(TIGameState actorState, bool allowJournies)
+    {
+       TIArmyState ref_army = actorState.ref_army;
+        return patch_TIArmyState.TeleportValid(ref_army, (patch_TIRegionState)ref_army.currentRegion).Cast<TIGameState>().ToList<TIGameState>();
+    }
+
+    public override List<TIGameState> GetPossibleTargets(TIGameState actorState, TIGameState defaultTarget = null)
+    {
+        TIArmyState ref_army = actorState.ref_army;
+        return patch_TIArmyState.TeleportValid(ref_army, (patch_TIRegionState)ref_army.currentRegion).Cast<TIGameState>().ToList<TIGameState>();
+    }
+
+    //public override bool OnOperationConfirm(TIGameState actorState, TIGameState target, TIResourcesCost resourcesCost = null, Trajectory trajectory = null)
+    //{
+    //    TIArmyState ref_army = actorState.ref_army;
+    //    TIRegionState ref_region = target.ref_region;
+    //    if (this.JourneyMode && ref_army.currentRegion != ref_region)
+    //    {
+    //        float num;
+    //        List<TIRegionState> journey = ref_army.GetJourney(ref_army.currentRegion, ref_region, out num);
+    //        if (journey == null)
+    //        {
+    //            return false;
+    //        }
+    //        target = journey[1];
+    //        if (ref_army.destinationQueue.Count == 0)
+    //        {
+    //            ref_army.destinationQueue.Add(ref_region);
+    //        }
+    //    }
+    //    GameControl.eventManager.TriggerEvent(new ArmyPathChanged(ref_army), null, new object[]
+    //    {
+    //        ref_army.currentRegion
+    //    });
+    //    List<TIRegionState> destinationQueue = ref_army.destinationQueue.ToList<TIRegionState>();
+    //    bool flag = base.OnOperationConfirm(actorState, target, resourcesCost, trajectory);
+    //    ref_army.destinationQueue = destinationQueue;
+    //    if (flag && ref_region != ref_army.currentRegion)
+    //    {
+    //        ref_army.SetIsMoving();
+    //        if (ref_army.homeNation.wars.Contains(ref_region.nation) || (ref_army.AlienMegafaunaArmy && !ref_region.nation.alienNation))
+    //        {
+    //            TINotificationQueueState.LogArmyLaunchesTowardEnemyRegion(ref_army, ref_region);
+    //        }
+    //    }
+    //    return flag;
+    //}
+
+    public override void ExecuteOperation(TIGameState actorState, TIGameState target)
+    {
+        TIArmyState ref_army = actorState.ref_army;
+        TIRegionState ref_region = target.ref_region;
+        if (ref_army.currentRegion == target)
+        {
+            ref_army.currentOperations.RemoveAt(0);
+            ref_army.SetNotMoving();
+            return;
+        }
+        ref_army.MoveArmyToRegion(ref_region, false);
+        //if (ref_army.destinationQueue.Count > 0)
+        //{
+        //    if (ref_army.destinationQueue.First<TIRegionState>() == ref_army.currentRegion)
+        //    {
+        //        ref_army.destinationQueue.RemoveAt(0);
+        //    }
+        //    if (ref_army.destinationQueue.Count > 0)
+        //    {
+        //        if (ref_army.ref_faction != null)
+        //        {
+        //            ref_army.ref_faction.playerControl.StartAction(new ConfirmOperationAction(actorState, ref_army.destinationQueue.First<TIRegionState>(), new DeployArmyOperation(false), null, null));
+        //        }
+        //        else
+        //        {
+        //            new DeployArmyOperation(false).OnOperationConfirm(ref_army, ref_army.destinationQueue.First<TIRegionState>(), null, null);
+        //        }
+        //    }
+        //}
+        if (ref_army.destinationQueue.Count == 0 || !ref_army.InFriendlyRegion)
+        {
+            TINotificationQueueState.LogArmyArrivesInRegion(ref_army, ref_army.currentRegion);
+        }
+    }
+
+    public override void OnOperationCancel(TIGameState actorState, TIGameState target, TIDateTime opCompleteDate)
+    {
+        base.OnOperationCancel(actorState, target, opCompleteDate);
+        if (!actorState.isArmyState)
+        {
+            return;
+        }
+        TIArmyState ref_army = actorState.ref_army;
+        ref_army.destinationQueue.Clear();
+        GameTimeManager.Singleton.CancelTimeEvent(ref_army.armyOperationCompleteEventName, ref_army, target, this, opCompleteDate);
+    }
+
+    public override bool Equals(object obj)
+    {
+        return obj is TeleportArmyOperation;
+    }
+}
+
+public class patch_TISpaceShipTemplate : TISpaceShipTemplate
+{
+    [MonoModIgnore]
+    public patch_TISpaceShipTemplate(string dataNameToSet) : base(dataNameToSet)
+    {
+        dataName = dataNameToSet;
+        SetHullTemplate(hullName);
+    }
+    public TIResourcesCost earthResourceConstructionCost(TIFactionState faction, TIHabModuleState shipyard)
+    {
+        TIResourcesCost tiresourcesCost = this.spaceResourceConstructionCost(false, shipyard, true, false, false);
+        TIResourcesCost tiresourcesCost2 = new TIResourcesCost();
+        float num = 0f;
+        float num2 = 0f;
+        foreach (FactionResource resource in TIResourcesCost.replaceableSpaceResources)
+        {
+            num += tiresourcesCost.GetSingleCostValue(resource) * TIGlobalValuesState.GlobalValues.GetPurchaseResourceMarketValue(resource);
+            num2 += tiresourcesCost.GetSingleCostValue(resource);
+        }
+        tiresourcesCost2.AddCost(FactionResource.Money, num, true);
+        if (shipyard.hab.IsBase)
+        {
+            tiresourcesCost2.AddCost(FactionResource.Boost, (float)TISpaceObjectState.GenericTransferBoostFromEarthSurface(faction, shipyard.ref_spaceBody, num2 / TemplateManager.global.spaceResourceToTons), true);
+        }
+        else
+        {
+            tiresourcesCost2.AddCost(FactionResource.Boost, (float)TISpaceObjectState.GenericTransferBoostFromEarthSurface(faction, shipyard.ref_orbit, num2 / TemplateManager.global.spaceResourceToTons), true);
+        }
+        foreach (FactionResource factionResource in patch_TIResourcesCost.irreplaceableSpaceResourcesNEW)
+        {
+            tiresourcesCost2.AddCost(factionResource, tiresourcesCost.GetSingleCostValue(factionResource), true);
+        }
+        tiresourcesCost2.SetCompletionTime_Days((shipyard == null) ? this.hullTemplate.noShipyardConstructionTime_Days(faction) : (this.hullTemplate.constructionTime_Days(shipyard) + TISpaceObjectState.GenericTransferTime_d(shipyard.ref_faction, GameStateManager.Earth(), shipyard)));
+        return tiresourcesCost2;
+    }
+}
 
 public abstract class patch_TIShipPartTemplate : TIShipPartTemplate
 {

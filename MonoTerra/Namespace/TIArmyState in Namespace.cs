@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using static UnityEngine.UI.Image;
 
 
 namespace PavonisInteractive.TerraInvicta
@@ -192,215 +193,36 @@ namespace PavonisInteractive.TerraInvicta
                 return;
             }
         }
+        private int reachableRegionsCachedFrame = -1;
+        private HashSet<TIRegionState> cachedReachableRegions = new HashSet<TIRegionState>();
 
-        //    //private HashSet<TIRegionState> cachedJourneyableRegions = new HashSet<TIRegionState>();
+        public bool Teleportable(TIRegionState destination, Func<TIRegionState, bool> IsRegionAllowed = null) { 
 
-        //    //private int journeyableRegionsCachedFrame = -1;
+            if (destination.template.oilResource && this.currentRegion.template.oilResource)
+            { 
+                return true;
+                }
+         return false;
+	}
 
-        //    //public IEnumerable<TIRegionState> JourneyableRegions
-        //    //{
-        //    //    get
-        //    //    {
-        //    //        if (this.journeyableRegionsCachedFrame != Time.frameCount)
-        //    //        {
-        //    //            this.cachedJourneyableRegions.Clear();
-        //    //            this.cachedJourneyableRegions.UnionWith(from x in TIRegionState.Regions
-        //    //                                                    where this.CanJourneyTo(x, false)
-        //    //                                                    select x);
-        //    //            this.journeyableRegionsCachedFrame = Time.frameCount;
-        //    //        }
-        //    //        return this.cachedJourneyableRegions;
-        //    //    }
-        //    //}
-
-        //    public static DeploymentType GetRequiredDeploymentType(TIRegionState origin, TIRegionState destination, TIArmyState army = null)
-        //    {
-        //        DeploymentType result;
-        //        TIArmyState.IsTraversible(origin, destination, out result, army);
-        //        return result;
-        //    }
-
-        //    public static List<TIRegionState> AllValidDestinationRegions(TIArmyState army, patch_TIRegionState currentRegion, bool includeCurrentRegion)
-        //    {
-        //        List<TIRegionState> list = new List<TIRegionState>();
-        //        bool navalFreedom = army.homeNation.navalFreedom;
-        //        List<TINationState> list2 = new List<TINationState>();
-        //        list2.Add(army.homeNation);
-        //        list2.AddRange(army.homeNation.allies);
-        //        IEnumerable<TINationState> enumerable = army.homeNation.wars.Distinct<TINationState>();
-        //        list2.AddRange(enumerable);
-        //        if (includeCurrentRegion)
-        //        {
-        //            list.Add(currentRegion);
-        //        }
-        //        List<TIRegionState> list3 = new List<TIRegionState>();
-        //        foreach (TINationState tinationState in list2)
-        //        {
-        //            bool iamAnInvadingArmy = enumerable.Contains(tinationState);
-        //            foreach (patch_TIRegionState tiregionState in tinationState.regions)
-        //            {
-        //                if (tiregionState.IsAdjacent(currentRegion, iamAnInvadingArmy) || (tiregionState != currentRegion && navalFreedom && army.deploymentType == DeploymentType.Naval && currentRegion.onTheWater && tiregionState.onTheWater) || (tiregionState != currentRegion && currentRegion.MagicResource && tiregionState.MagicResource))
-        //                {
-        //                    list.Add(tiregionState);
-        //                }
-        //                else
-        //                {
-        //                    list3.Add(tiregionState);
-        //                }
-        //            }
-        //        }
-        //        int num = 0;
-        //        bool flag;
-        //        do
-        //        {
-        //            flag = false;
-        //            foreach (TIRegionState tiregionState2 in list3.ToList<TIRegionState>())
-        //            {
-        //                if (tiregionState2.AdjacentRegions(enumerable.Contains(tiregionState2.nation)).Intersect(list).Any<TIRegionState>())
-        //                {
-        //                    list.Add(tiregionState2);
-        //                    list3.Remove(tiregionState2);
-        //                    flag = true;
-        //                }
-        //            }
-        //            num++;
-        //        }
-        //        while (flag && num < 1000);
-        //        if (num >= 1000)
-        //        {
-        //            Log.Error("Something wrong with the loop", Array.Empty<object>());
-        //        }
-        //        return list;
-        //    }
-
-        //    public static IList<TIRegionState> OneStepValidDestinationRegions(TIArmyState army, patch_TIRegionState currentRegion, bool includeCurrentRegion)
-        //    {
-        //        List<TIRegionState> list = new List<TIRegionState>();
-        //        if (army.AlienMegafaunaArmy)
-        //        {
-        //            list.AddRange(army.ref_region.AdjacentRegions(true));
-        //            if (!includeCurrentRegion && list.Contains(currentRegion))
-        //            {
-        //                list.Remove(currentRegion);
-        //            }
-        //        }
-        //        else
-        //        {
-        //            bool flag = army.homeNation.navalFreedom && army.deploymentType == DeploymentType.Naval && currentRegion.onTheWater;
-
-        //            bool teleport = currentRegion.MagicResource;
-
-        //            List<TINationState> list2 = new List<TINationState>();
-        //            list2.Add(army.homeNation);
-        //            list2.AddRange(army.homeNation.allies);
-
-        //            if (includeCurrentRegion)
-        //            {
-        //                list.Add(currentRegion);
-        //            }
-        //            foreach (TINationState tinationState in list2)
-        //            {
-        //                foreach (patch_TIRegionState tiregionState in tinationState.regions)
-        //                {
-        //                    if (tiregionState.IsAdjacent(currentRegion, false) || (teleport && tiregionState != currentRegion && tiregionState.MagicResource) || (flag && tiregionState != currentRegion && tiregionState.onTheWater))
-        //                    {
-        //                        list.Add(tiregionState);
-        //                    }
-        //                }
-        //            }
-        //            foreach (TINationState tinationState2 in army.homeNation.wars.Distinct<TINationState>())
-        //            {
-        //                foreach (TIRegionState tiregionState2 in tinationState2.regions)
-        //                {
-        //                    if (tiregionState2.IsAdjacent(currentRegion, true) || (tiregionState2 != currentRegion && flag && tiregionState2.onTheWater))
-        //                    {
-        //                        list.Add(tiregionState2);
-        //                    }
-        //                }
-        //            }
-        //        }
-        //        return list;
-        //    }
-
-
-        //    public static bool IsTraversible(patch_TIRegionState origin, patch_TIRegionState destination, out patch_DeploymentType deploymentTypeRequired, TIArmyState army = null)
-        //    {
-        //        deploymentTypeRequired = (patch_DeploymentType)DeploymentType.None;
-        //        bool flag = origin.onTheWater && destination.onTheWater;
-        //        if (flag && army != null)
-        //        {
-        //            flag = (army.deploymentType == DeploymentType.Naval && army.homeNation.navalFreedom);
-        //        }
-        //        bool flag2 = origin.Neighbors.Contains(destination);
-        //        if (flag2 && army != null)
-        //        {
-        //            switch (origin.GetAdjacencyType(destination))
-        //            {
-        //                case TerrestrialAdjacencyType.None:
-        //                    flag2 = false;
-        //                    break;
-        //                case TerrestrialAdjacencyType.FriendlyCrossingOnly:
-        //                    flag2 = (!army.AlienMegafaunaArmy && !destination.nation.wars.Contains(army.homeNation));
-        //                    break;
-        //            }
-        //        }
-        //        bool flag3 = origin.MagicResource && destination.MagicResource;
-
-        //        if (flag3)
-        //        {
-        //            deploymentTypeRequired = (patch_DeploymentType)DeploymentType.Standard;
-        //            return true;
-        //        }
-        //        else
-        //            if (flag2)
-        //        {
-        //            deploymentTypeRequired = (patch_DeploymentType)DeploymentType.Standard;
-        //        }
-        //        else
-        //        {
-        //            if (!flag)
-        //            {
-        //                return false;
-        //            }
-        //            deploymentTypeRequired = (patch_DeploymentType)DeploymentType.Naval;
-        //        }
-        //        return true;
-        //    }
-        //}
-        //public class patch_OrgItemView : OrgItemView
-
-        //{
-        //    public void OnRightClickItem()
-        //    {
-        //        if (this.dragDestination == this.councilorController.availableDragDestination || this.dragDestination == this.councilorController.councilDragDestination)
-        //        {
-        //            this.councilorController.ShowInfoMyOrg(this.orgName.text, this.org.description(false), this.orgIcon.sprite);
-        //            this.councilorController.selectedOrgTop = this;
-        //            this.councilorController.orgActionButtonTextTop.SetText(Loc.T("UI.Council.UnequipOrg"), true);
-        //            this.councilorController.orgActionButtonTextTop2.SetText(Loc.T("UI.Council.SellOrg"), true);
-        //        }
-        //        if (this.dragDestination == this.councilorController.councilorDragDestination)
-        //        {
-        //            this.councilorController.ShowInfoEquipOrg(this.org.displayName, this.org.hasFaction ? this.org.GetSalePrice().ToString("Relevant", false, false, null, false) : this.org.GetPurchaseCost(GameControl.control.activePlayer).ToString("Relevant", false, false, null, false), this.org.description(false), this.orgIcon.sprite);
-        //            this.councilorController.selectedOrgBottom = this;
-        //            if (this.org.hasFaction)
-        //            {
-        //                this.councilorController.orgActionButtonTextBottom.SetText(Loc.T("UI.Council.EquipOrg"), true);
-        //                this.councilorController.orgActionButtonTextBottom2.SetText(Loc.T("UI.Council.SellOrg"), true);
-        //                this.councilorController.orgActionButtonBottom2.gameObject.SetActive(true);
-        //                return;
-        //            }
-        //            this.councilorController.orgActionButtonTextBottom.SetText(Loc.T("UI.Council.PurchaseOrg"), true);
-        //            this.councilorController.orgActionButtonBottom2.gameObject.SetActive(false);
-        //        }
-        //    }
-        //    private TIOrgState org;
-        //    private DragDestination dragDestination;
-
-        //    //     public enum patch_OrgStatus : ushort
-        //    //    {
-        //    //        Special = 5
-        //    //    }
-        //}
+        public static IList<TIRegionState> TeleportValid(TIArmyState army, patch_TIRegionState currentRegion)
+        {
+            List<TIRegionState> list = new List<TIRegionState>();
+                List<TINationState> list2 = new List<TINationState>();
+                list2.Add(army.homeNation);
+                list2.AddRange(army.homeNation.allies);
+                foreach (TINationState tinationState in list2)
+                {
+                    foreach (patch_TIRegionState tiregionState in tinationState.regions)
+                    {
+                        if (currentRegion.isTeleport && tiregionState.isTeleport)
+                        {
+                            list.Add(tiregionState);
+                        }
+                    }
+                }
+            
+            return list;
+        }
     }
 }

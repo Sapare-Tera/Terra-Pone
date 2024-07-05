@@ -12,10 +12,31 @@ using System.Security.AccessControl;
 using Mono.Cecil;
 using PavonisInteractive.TerraInvicta.Actions;
 using PavonisInteractive.TerraInvicta.Entities;
+using UnityEngine.EventSystems;
 
 namespace PavonisInteractive.TerraInvicta
 {
-    public class patch_TIMissionPhaseState : TIMissionPhaseState
+    public class patch_MarkerController : MarkerController, IPointerEnterHandler, IEventSystemHandler, IPointerExitHandler
+    {
+        public extern void orig_Initialize(MarkerType mType, TIGameState location);
+        public void Initialize(MarkerType mType, TIGameState location)
+        {
+            orig_Initialize(mType, location);
+
+            switch (mType)
+            {
+                case MarkerType.Army:
+                case MarkerType.HumanLaserFacility:
+                case MarkerType.HumanMissionControlFacility:
+                case MarkerType.HumanLaunchFacility:
+                case MarkerType.RegionalStatusIcon:
+                    hasModel = false;
+                    break;
+            }
+        }
+    }
+
+        public class patch_TIMissionPhaseState : TIMissionPhaseState
     {
         private void StartofTurnBookkeeping()
         {
@@ -64,21 +85,19 @@ namespace PavonisInteractive.TerraInvicta
                     }
                     bool flag = false;
                     TIMissionState completedMission = ticouncilorState2.completedMission;
-                    
-                    if (completedMission.missionTemplate.dataName == "Advise_Statesman")
-                    {
-                        
-                        double Attribute = ticouncilorState2.GetAttribute(CouncilorAttribute.Administration);
-                        Log.Debug($"Initial Attribute {Attribute}");
-                        Attribute = Attribute * 0.333;
-                        Log.Debug($"The Deductions {Attribute}");
-                        Attribute = Math.Round(Attribute);
-                        Log.Debug($"The rounded {Attribute}");
-                        ticouncilorState2.ModifyAttribute(CouncilorAttribute.Administration, (int)-Attribute);
-                        Log.Debug($"Final Attribute {ticouncilorState2.GetAttribute(CouncilorAttribute.Administration)}");
-                    }
 
-                    if (completedMission.missionTemplate.dataName == "Advise_Scientist")
+                    if (completedMission != null && completedMission.missionTemplate.dataName == "Advise_Statesman")
+                    {
+                        double Attribute = ticouncilorState2.GetAttribute(CouncilorAttribute.Administration);
+                        //Log.Debug($"Initial Attribute {Attribute}");
+                        Attribute = Attribute * 0.333;
+                        //Log.Debug($"The Deductions {Attribute}");
+                        Attribute = Math.Round(Attribute);
+                        //Log.Debug($"The rounded {Attribute}");
+                        ticouncilorState2.ModifyAttribute(CouncilorAttribute.Administration, (int)-Attribute);
+                        //Log.Debug($"Final Attribute {ticouncilorState2.GetAttribute(CouncilorAttribute.Administration)}");
+                    }
+                    if (completedMission != null && completedMission.missionTemplate.dataName == "Advise_Scientist")
                     {
                         double Attribute = ticouncilorState2.GetAttribute(CouncilorAttribute.Science);
                         Attribute = Attribute * 0.333;
@@ -86,7 +105,12 @@ namespace PavonisInteractive.TerraInvicta
                         ticouncilorState2.ModifyAttribute(CouncilorAttribute.Science, -(int)Attribute);
                     }
 
-                    if (completedMission.missionTemplate.dataName == "Advise_Super")
+                    if (completedMission != null && completedMission.missionTemplate.dataName == "LivingComputing")
+                    {
+                        ticouncilorState2.ModifyAttribute(CouncilorAttribute.Security, -25);
+                    }
+
+                    if (completedMission != null && completedMission.missionTemplate.dataName == "Advise_Super")
                     {
                         double Attribute2 = ticouncilorState2.GetAttribute(CouncilorAttribute.Administration);
                         Attribute2 = Attribute2 * 0.333;

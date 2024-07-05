@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 
 public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, is ok
 {
-    //[MonoModOriginal] public extern void orig_PostGlobalGameStateCreateInit_2();
     private static readonly Dictionary<CoastRegion, Dictionary<CoastRegion, float>> _defaultSeaTravelModifiers = new Dictionary<CoastRegion, Dictionary<CoastRegion, float>>
     {
         {
