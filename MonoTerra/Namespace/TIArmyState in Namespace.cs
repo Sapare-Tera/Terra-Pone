@@ -88,7 +88,7 @@ namespace PavonisInteractive.TerraInvicta
                         if (count2 == 0)
                         {
                             float num7 = 0.8f + UnityEngine.Random.Range(0f, 0.4f);
-                            float num8 = attackValue * 0.000225f * num6 * num2 * num7;
+                            float num8 = attackValue * 0.0005f * num6 * num2 * num7;
                             float num9 = (float)count - this.currentRegion.mapRegionTemplate.area_km2 / 100000f;
                             if (num9 > 0f)
                             {
@@ -196,32 +196,33 @@ namespace PavonisInteractive.TerraInvicta
         private int reachableRegionsCachedFrame = -1;
         private HashSet<TIRegionState> cachedReachableRegions = new HashSet<TIRegionState>();
 
-        public bool Teleportable(TIRegionState destination, Func<TIRegionState, bool> IsRegionAllowed = null) { 
+        public bool Teleportable(TIRegionState destination, Func<TIRegionState, bool> IsRegionAllowed = null)
+        {
 
             if (destination.template.oilResource && this.currentRegion.template.oilResource)
-            { 
+            {
                 return true;
-                }
-         return false;
-	}
+            }
+            return false;
+        }
 
         public static IList<TIRegionState> TeleportValid(TIArmyState army, patch_TIRegionState currentRegion)
         {
             List<TIRegionState> list = new List<TIRegionState>();
-                List<TINationState> list2 = new List<TINationState>();
-                list2.Add(army.homeNation);
-                list2.AddRange(army.homeNation.allies);
-                foreach (TINationState tinationState in list2)
+            List<TINationState> list2 = new List<TINationState>();
+            list2.Add(army.homeNation);
+            list2.AddRange(army.homeNation.allies);
+            foreach (TINationState tinationState in list2)
+            {
+                foreach (patch_TIRegionState tiregionState in tinationState.regions)
                 {
-                    foreach (patch_TIRegionState tiregionState in tinationState.regions)
+                    if (currentRegion.isTeleport && tiregionState.isTeleport)
                     {
-                        if (currentRegion.isTeleport && tiregionState.isTeleport)
-                        {
-                            list.Add(tiregionState);
-                        }
+                        list.Add(tiregionState);
                     }
                 }
-            
+            }
+
             return list;
         }
     }

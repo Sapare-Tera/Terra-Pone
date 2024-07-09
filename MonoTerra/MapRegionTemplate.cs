@@ -5,9 +5,23 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, is ok
+public class patch_TIMapRegionTemplate : TIMapRegionTemplate 
 {
-    private static readonly Dictionary<CoastRegion, Dictionary<CoastRegion, float>> _defaultSeaTravelModifiers = new Dictionary<CoastRegion, Dictionary<CoastRegion, float>>
+    public static float GetSeaTravelMultiplier(CoastRegion region1, CoastRegion region2, bool SuezAccess, bool PanamaAccess, bool arcticOpen = false)
+    {
+        float num = patch_TIMapRegionTemplate._defaultSeaTravelModifiersNEW[region1][region2];
+        //if (!SuezAccess && TIMapRegionTemplate.SuezRoute(region1, region2, arcticOpen))
+        //{
+        //    num *= 1.6f;
+        //}
+        //if (!PanamaAccess && TIMapRegionTemplate.PanamaRoute(region1, region2, arcticOpen))
+        //{
+        //    num *= 1.4f;
+        //}
+        return num;
+    }
+
+    static readonly Dictionary<CoastRegion, Dictionary<CoastRegion, float>> _defaultSeaTravelModifiersNEW = new Dictionary<CoastRegion, Dictionary<CoastRegion, float>>
     {
         {
             CoastRegion.Arctic, //Great Ocean North
@@ -18,12 +32,12 @@ public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, i
                     1f
                 },
                 {
-                    CoastRegion.BalticSea,
-                    4.5f
+                    CoastRegion.BlackMed,
+                    1.25f
                 },
                 {
-                    CoastRegion.BlackSea,
-                    3f
+                    CoastRegion.PacificCarib,
+                    1.25f
                 },
                 {
                     CoastRegion.Caribbean,
@@ -43,7 +57,7 @@ public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, i
                 },
                 {
                     CoastRegion.NortheastPacific,
-                    3.1f
+                    2.8f
                 },
                 {
                     CoastRegion.NorthwestAtlantic,
@@ -51,19 +65,23 @@ public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, i
                 },
                 {
                     CoastRegion.NorthwestPacific,
-                    3.1f
+                    3.2f
                 },
                 {
                     CoastRegion.SouthAtlantic,
                     1.1f
                 },
                 {
-                    CoastRegion.SouthChinaSea,
-                    1.25f
+                    CoastRegion.IndianMed,
+                    1.45f
                 },
                 {
                     CoastRegion.SoutheastPacific,
                     1.1f
+                },
+                {
+                    CoastRegion.MedNorthAtlantic,
+                    1.25f
                 },
                 {
                     CoastRegion.SouthwestPacific,
@@ -101,11 +119,11 @@ public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, i
                 },
                 {
                     CoastRegion.NortheastAtlantic,
-                    1.1f
+                    1f
                 },
                 {
                     CoastRegion.NortheastPacific,
-                    2.7f
+                   3.5f
                 },
                 {
                     CoastRegion.NorthwestAtlantic,
@@ -113,7 +131,7 @@ public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, i
                 },
                 {
                     CoastRegion.NorthwestPacific,
-                    2.25f
+                    5f
                 },
                 {
                     CoastRegion.MedNorthAtlantic,
@@ -163,7 +181,7 @@ public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, i
                 },
                 {
                     CoastRegion.NortheastPacific,
-                    2.7f
+                    3f
                 },
                 {
                     CoastRegion.NorthwestAtlantic,
@@ -171,7 +189,7 @@ public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, i
                 },
                 {
                     CoastRegion.NorthwestPacific,
-                    2.25f
+                    4.2f
                 },
                 {
                     CoastRegion.MedNorthAtlantic,
@@ -196,12 +214,12 @@ public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, i
                     1.25f
                 },
                 {
-                    CoastRegion.BalticSea,
-                    1.25f
+                    CoastRegion.PacificCarib,
+                    1.45f
                 },
                 {
-                    CoastRegion.BlackSea,
-                    1.4f
+                    CoastRegion.BlackMed,
+                    1.15f
                 },
                 {
                     CoastRegion.Caribbean,
@@ -210,6 +228,10 @@ public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, i
                 {
                     CoastRegion.Indian,
                     1.25f
+                },
+                 {
+                    CoastRegion.IndianMed,
+                    1.35f
                 },
                 {
                     CoastRegion.Mediterranean,
@@ -221,7 +243,7 @@ public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, i
                 },
                 {
                     CoastRegion.NortheastPacific,
-                    1.5f
+                    1.25f
                 },
                 {
                     CoastRegion.NorthwestAtlantic,
@@ -229,7 +251,7 @@ public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, i
                 },
                 {
                     CoastRegion.NorthwestPacific,
-                    1.1f
+                    1.5f
                 },
                 {
                     CoastRegion.MedNorthAtlantic,
@@ -589,7 +611,7 @@ public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, i
                 },
                 {
                     CoastRegion.Indian,
-                    1.33f
+                    1.35f
                 },
                 {
                     CoastRegion.MedNorthAtlantic,
@@ -597,7 +619,7 @@ public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, i
                 },
                 {
                     CoastRegion.NortheastAtlantic,
-                    222.5f
+                   3.5f
                 },
                 {
                     CoastRegion.NortheastPacific,
@@ -605,7 +627,7 @@ public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, i
                 },
                 {
                     CoastRegion.NorthwestAtlantic,
-                    2.5f
+                    3f
                 },
                 {
                     CoastRegion.NorthwestPacific,
@@ -629,7 +651,7 @@ public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, i
             CoastRegion.NorthwestPacific, //West Etruscan Ocean
             new Dictionary<CoastRegion, float>
             {
-                              {
+             {
                     CoastRegion.Arctic,
                     1.95f
                 },
@@ -647,7 +669,7 @@ public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, i
                 },
                 {
                     CoastRegion.Indian,
-                    1.48f
+                    1.65f
                 },
                 {
                     CoastRegion.MedNorthAtlantic,
@@ -655,7 +677,7 @@ public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, i
                 },
                 {
                     CoastRegion.NortheastAtlantic,
-                    2.7f
+                    5f
                 },
                 {
                     CoastRegion.NortheastPacific,
@@ -663,11 +685,11 @@ public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, i
                 },
                 {
                     CoastRegion.NorthwestAtlantic,
-                    2.7f
+                    4.2f
                 },
                 {
                     CoastRegion.NorthwestPacific,
-                    1.15f
+                    1.0f
                 },
                 {
                     CoastRegion.BlackMed,
@@ -775,7 +797,7 @@ public class patch_TIMapRegionTemplate : TIMapRegionTemplate //not functional, i
                 },
                 {
                     CoastRegion.NortheastPacific,
-                    1f
+                    1.05f
                 },
                 {
                     CoastRegion.NorthwestAtlantic,

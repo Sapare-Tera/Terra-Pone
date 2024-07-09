@@ -229,6 +229,103 @@ namespace PavonisInteractive.TerraInvicta
 
         public bool TeleportRegion;
 
+        public static float SeaTravelMultiplier(TINationState movingNation, TIRegionState region1, TIRegionState region2)
+        {
+            if (region1.IsAdjacent(region2, false))
+            {
+                return 1f;
+            }
+            bool suezAccess = movingNation == null || TIRegionState.SuezAccess(movingNation);
+            bool panamaAccess = movingNation == null || TIRegionState.PanamaAccess(movingNation);
+            suezAccess = false;
+            panamaAccess = false;
+            Log.Debug($"A {region1}");
+            Log.Debug($"A {region2}");
+            //bool flag = false;
+            //bool flag2 = false;
+            CoastRegion region3 = CoastRegion.none;
+            CoastRegion region4 = CoastRegion.none;
+            CoastRegion region5 = CoastRegion.none;
+            CoastRegion region6 = CoastRegion.none;
+            //switch (region1.mapRegionTemplate.coast)
+            //{
+            //    case CoastRegion.IndianMed:
+            //        region3 = CoastRegion.Indian;
+            //        region4 = CoastRegion.Mediterranean;
+            //        flag = true;
+            //        break;
+            //    case CoastRegion.PacificCarib:
+            //        region3 = CoastRegion.NortheastPacific;
+            //        region4 = CoastRegion.Caribbean;
+            //        flag = true;
+            //        break;
+            //    case CoastRegion.MedNorthAtlantic:
+            //        region3 = CoastRegion.Mediterranean;
+            //        region4 = CoastRegion.NortheastAtlantic;
+            //        flag = true;
+            //        break;
+            //    case CoastRegion.BlackMed:
+            //        region3 = CoastRegion.BlackSea;
+            //        region4 = CoastRegion.Mediterranean;
+            //        flag = true;
+            //        break;
+            //}
+            //switch (region2.mapRegionTemplate.coast)
+            //{
+            //    case CoastRegion.IndianMed:
+            //        region5 = CoastRegion.Indian;
+            //        region6 = CoastRegion.Mediterranean;
+            //        flag2 = true;
+            //        break;
+            //    case CoastRegion.PacificCarib:
+            //        region5 = CoastRegion.NortheastPacific;
+            //        region6 = CoastRegion.Caribbean;
+            //        flag2 = true;
+            //        break;
+            //    case CoastRegion.MedNorthAtlantic:
+            //        region5 = CoastRegion.Mediterranean;
+            //        region6 = CoastRegion.NortheastAtlantic;
+            //        flag2 = true;
+            //        break;
+            //    case CoastRegion.BlackMed:
+            //        region5 = CoastRegion.BlackSea;
+            //        region6 = CoastRegion.Mediterranean;
+            //        flag2 = true;
+            //        break;
+            //}
+            //if (flag)
+            //{
+            //    if (flag2)
+            //    {
+            //        float seaTravelMultiplier = TIMapRegionTemplate.GetSeaTravelMultiplier(region3, region5, suezAccess, panamaAccess, false);
+            //        float seaTravelMultiplier2 = TIMapRegionTemplate.GetSeaTravelMultiplier(region4, region5, suezAccess, panamaAccess, false);
+            //        float seaTravelMultiplier3 = TIMapRegionTemplate.GetSeaTravelMultiplier(region3, region6, suezAccess, panamaAccess, false);
+            //        float seaTravelMultiplier4 = TIMapRegionTemplate.GetSeaTravelMultiplier(region4, region6, suezAccess, panamaAccess, false);
+            //        return Mathf.Min(new float[]
+            //        {
+            //            seaTravelMultiplier,
+            //            seaTravelMultiplier2,
+            //            seaTravelMultiplier3,
+            //            seaTravelMultiplier4
+            //        });
+            //    }
+            //    float seaTravelMultiplier5 = TIMapRegionTemplate.GetSeaTravelMultiplier(region3, region2.mapRegionTemplate.coast, suezAccess, panamaAccess, false);
+            //    float seaTravelMultiplier6 = TIMapRegionTemplate.GetSeaTravelMultiplier(region4, region2.mapRegionTemplate.coast, suezAccess, panamaAccess, false);
+            //    return Mathf.Min(seaTravelMultiplier5, seaTravelMultiplier6);
+            //}
+            //else
+            //{
+            //    if (flag2)
+            //    {
+            //        float seaTravelMultiplier7 = TIMapRegionTemplate.GetSeaTravelMultiplier(region1.mapRegionTemplate.coast, region5, suezAccess, panamaAccess, false);
+            //        float seaTravelMultiplier8 = TIMapRegionTemplate.GetSeaTravelMultiplier(region1.mapRegionTemplate.coast, region6, suezAccess, panamaAccess, false);
+            //        return Mathf.Min(seaTravelMultiplier7, seaTravelMultiplier8);
+            //    }
+            return TIMapRegionTemplate.GetSeaTravelMultiplier(region1.mapRegionTemplate.coast, region2.mapRegionTemplate.coast, suezAccess, panamaAccess, false);
+            //}
+        }
+
+
 
         public bool isMagic
         {

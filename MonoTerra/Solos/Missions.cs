@@ -281,7 +281,7 @@ public class TIMissionEffect_Advise_Scientist : TIMissionEffect
     {
         TICouncilorState councilor = mission.councilor;
 
-        double SCI = councilor.GetAttribute(CouncilorAttribute.Science);
+        double SCI = councilor.GetAttribute(CouncilorAttribute.Science, false, true, false,false); ; ;
         SCI = SCI * 0.5;
         SCI = Math.Round(SCI);
         councilor.ModifyAttribute(CouncilorAttribute.Science, (int)SCI);
@@ -324,7 +324,7 @@ public class TIMissionEffect_Advise_Statesman : TIMissionEffect
 
 
         TICouncilorState councilor = mission.councilor;
-        double Admin = councilor.GetAttribute(CouncilorAttribute.Administration);
+        double Admin = councilor.GetAttribute(CouncilorAttribute.Administration, false, true, false, false);
         Admin  = Admin * 0.5;
         Admin = Math.Round(Admin);
         councilor.ModifyAttribute(CouncilorAttribute.Administration, (int)Admin);
@@ -370,12 +370,12 @@ public class TIMissionEffect_Advise_Super : TIMissionEffect
 	{
 		TICouncilorState councilor = mission.councilor;
 
-        double Admin = councilor.GetAttribute(CouncilorAttribute.Administration);
+        double Admin = councilor.GetAttribute(CouncilorAttribute.Administration, false, true, false, false);
         Admin = Admin * 0.5;
         Admin = Math.Round(Admin);
         councilor.ModifyAttribute(CouncilorAttribute.Administration, (int)Admin);
 
-        double SCI = councilor.GetAttribute(CouncilorAttribute.Administration);
+        double SCI = councilor.GetAttribute(CouncilorAttribute.Science, false, true, false, false);
         SCI = SCI * 0.5;
         SCI = Math.Round(SCI);
         councilor.ModifyAttribute(CouncilorAttribute.Science, (int)SCI);
