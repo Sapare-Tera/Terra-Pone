@@ -25,174 +25,355 @@ namespace PavonisInteractive.TerraInvicta
             }
         }
         public void EngageLocalForcesAndOccupy(bool regionReturnFireOnly = false)
-        {
-            if (this.atSea)
-            {
-                return;
-            }
-            List<TIArmyState> list = this.currentRegion.FilteredArmiesPresent(false, false, true, false);
-            int count = list.Count;
-            List<TIArmyState> list2 = this.currentRegion.FilteredArmiesPresent(true, true, false, false);
-            int count2 = list2.Count;
-            TINationState getOccupierNation = this.GetOccupierNation;
-            float num;
-            if (this.InFriendlyRegion)
-            {
-                num = 0.01f * (float)count2 * (float)count2;
-            }
-            else
-            {
-                num = 0.01f * (float)count * (float)count;
-            }
-            float num2 = ((this.strength == 1f && (!this.currentRegion.occupations.ContainsKey(this.homeNation) || this.currentRegion.occupations[this.homeNation] <= 0f)) || UnityEngine.Random.value < num) ? 40f : 1f;
-            if (!this.AlienMegafaunaArmy)
-            {
-                if (this.strength == 1f)
-                {
-                    if (this.currentRegion.occupations.Count<KeyValuePair<TINationState, float>>() != 0)
-                    {
-                        if (!this.currentRegion.occupations.All((KeyValuePair<TINationState, float> x) => x.Value <= 0f))
-                        {
-                            goto IL_120;
-                        }
-                    }
-                    num2 = 100f;
-                    goto IL_149;
-                }
-            IL_120:
-                float value = UnityEngine.Random.value;
-                if (value < num)
-                {
-                    num2 = 40f;
-                }
-                else if (value < num * 2f)
-                {
-                    num2 = 5f;
-                }
-            }
-        IL_149:
-            float attackValue = this.GetAttackValue();
-            float num3 = this.LocalForcesBaseDefenseLevel(true);
-            bool inFriendlyRegion = this.InFriendlyRegion;
-            float combatSuccessChance = this.GetCombatSuccessChance(inFriendlyRegion ? attackValue : num3, inFriendlyRegion ? num3 : attackValue);
-            this.currentRegion.ApplyDamageToRegion(Mathf.Max(1f, 12f - attackValue) * this.regionDamageScaling, this.faction, this.homeNation, false, false, false, false);
-            float num4 = Mathf.Pow(this.currentRegion.populationInMillions, 0.75f) / Mathf.Pow(TIGlobalValuesState.GlobalValues.averageRegionPopulation, 0.75f);
-            float num5 = Mathf.Pow(this.currentRegion.mapRegionTemplate.area_km2, 0.75f) / Mathf.Pow(TIGlobalValuesState.GlobalValues.medianRegionArea, 0.75f);
-            float num6 = 1f / ((num4 + num5) * 0.5f);
-            if (UnityEngine.Random.value >= combatSuccessChance)
-            {
-                if (!regionReturnFireOnly)
-                {
-                    if (!inFriendlyRegion)
-                    {
-                        if (count2 == 0)
-                        {
-                            float num7 = 0.8f + UnityEngine.Random.Range(0f, 0.4f);
-                            float num8 = attackValue * 0.0005f * num6 * num2 * num7;
-                            float num9 = (float)count - this.currentRegion.mapRegionTemplate.area_km2 / 100000f;
-                            if (num9 > 0f)
-                            {
-                                num8 *= Mathf.Max(0.5f, 1f - num9 * 0.02f);
-                            }
-                            num8 = Mathf.Min(0.1f, num8);
-                            this.currentRegion.IncreaseOccupationValue(this.homeNation, num8, this);
-                        }
-                    }
-                    else
-                    {
-                        float num10 = 0.8f + UnityEngine.Random.Range(0f, 0.4f);
-                        float num11 = attackValue * 0.000225f * num6 * num2 * ((count == 0) ? (1f + num10) : num10);
-                        num11 = Mathf.Min(0.1f, num11);
-                        this.currentRegion.IncreaseOccupationValue(getOccupierNation, -num11, this);
-                    }
-                    if (this.armyType == ArmyType.AlienInvader && num2 > 1f)
-                    {
-                        this.currentRegion.ConductAbductions(this.faction, 1);
-                    }
-                }
-                return;
-            }
-            float num12 = num3 * 0.000225f * num2 * (0.8f + UnityEngine.Random.Range(0f, 0.4f));
-            num12 += TIEffectsState.SumEffectsModifiers(Context.ArmyDamageBonustoAllArmies, this.currentRegion.nation.executiveFaction, num12);
-            if (!inFriendlyRegion)
-            {
-                ArmyType armyType = this.armyType;
-                if (armyType != ArmyType.Human)
-                {
-                    if (armyType == ArmyType.AlienInvader)
-                    {
-                        num12 += TIEffectsState.SumEffectsModifiers(Context.ArmyDamageBonustoInvaderArmy, this.currentNation.executiveFaction, num12);
-                    }
-                }
-                else
-                {
-                    num12 += TIEffectsState.SumEffectsModifiers(Context.ArmyDamageBonustoHumanArmy, this.currentNation.executiveFaction, num12);
-                }
-            }
-            float num13 = (float)(inFriendlyRegion ? (count2 - count) : (count - count2));
-            if (num13 > 0f)
-            {
-                num12 *= 1f - num13 / (num13 + 2f);
-            }
-            float num14;
-            if (this.armyType == ArmyType.AlienMegafauna)
-            {
-                num14 = 0f;
-            }
-            else if (!inFriendlyRegion)
-            {
-                if (!this.currentRegion.occupations.ContainsKey(this.homeNation) || this.currentRegion.occupations[this.homeNation] <= 0f)
-                {
-                    num14 = 0f;
-                }
-                else if (count == 0 || list.Count == 0)
-                {
-                    num14 = 1f;
-                }
-                else
-                {
-                    float num15 = this.currentRegion.occupations[this.homeNation];
-                    float num16 = (float)count * list.Average((TIArmyState x) => x.strength);
-                    num14 = num15 / num16;
-                }
-            }
-            else if (count == 0)
-            {
-                num14 = 1f;
-            }
-            else
-            {
-                float num17 = (float)count2 * list2.Average((TIArmyState x) => x.strength);
-                float num18 = (float)count * list.Average((TIArmyState x) => x.strength) * ((getOccupierNation != null) ? this.currentRegion.occupations[getOccupierNation] : 1f);
-                num14 = num17 / num18;
-            }
-            if (UnityEngine.Random.value < num14)
-            {
-                if (!inFriendlyRegion)
-                {
-                    float num19 = 0.8f + UnityEngine.Random.Range(0f, 0.4f);
-                    float num20 = Mathf.Min(0.1f, num3 * 0.000225f * num2 * num6 * num19);
-                    this.currentRegion.IncreaseOccupationValue(this.homeNation, -num20, null);
-                    this.TakeDamage(num12 / 4, this.currentRegion.ref_faction, this.currentRegion.nation);
-                    return;
-                }
-                float num21 = 0.8f + UnityEngine.Random.Range(0f, 0.4f);
-                float num22 = Mathf.Min(0.1f, Mathf.Max(1f, this.currentRegion.nation.cohesion - this.currentRegion.nation.unrest) * attackValue * 0.000225f * num2 * num6 * num21);
-                this.currentRegion.IncreaseOccupationValue(getOccupierNation, -num22, null);
-                this.TakeDamage(num12 / 4 * (1.1f - this.currentNation.cohesion), (getOccupierNation != null) ? getOccupierNation.ref_faction : null, getOccupierNation);
-                return;
-            }
-            else
-            {
-                if (!inFriendlyRegion)
-                {
-                    this.TakeDamage(0.5f * num12, this.currentRegion.ref_faction, this.currentRegion.nation);
-                    return;
-                }
-                this.TakeDamage((0.5f - this.currentNation.cohesion) * num12, (getOccupierNation != null) ? getOccupierNation.ref_faction : null, getOccupierNation);
-                return;
-            }
-        }
+		{
+			if (this.atSea)
+			{
+				return;
+			}
+			List<TIArmyState> list = this.currentRegion.FilteredArmiesPresent(false, false, true, false, false);
+			int count = list.Count;
+			List<TIArmyState> list2 = this.currentRegion.FilteredArmiesPresent(true, false, false, false, true);
+			int count2 = list2.Count;
+			TINationState getOccupierNation = this.GetOccupierNation;
+			bool inFriendlyRegion = this.InFriendlyRegion;
+			float num;
+			if (inFriendlyRegion)
+			{
+				num = 0.01f * (float)count2 * (float)count2;
+			}
+			else
+			{
+				num = 0.01f * (float)count * (float)count;
+			}
+			float num2 = ((this.strength == 1f && (!this.currentRegion.occupations.ContainsKey(this.homeNation) || this.currentRegion.occupations[this.homeNation] <= 0f)) || UnityEngine.Random.value < num) ? 40f : 1f;
+			if (!this.AlienMegafaunaArmy)
+			{
+				if (this.strength == 1f)
+				{
+					if (this.currentRegion.occupations.Count<KeyValuePair<TINationState, float>>() != 0)
+					{
+						if (!this.currentRegion.occupations.All((KeyValuePair<TINationState, float> x) => x.Value <= 0f))
+						{
+							goto IL_126;
+						}
+					}
+					num2 = 100f;
+					goto IL_14F;
+				}
+				IL_126:
+				float value = UnityEngine.Random.value;
+				if (value < num)
+				{
+					num2 = 40f;
+				}
+				else if (value < num * 2f)
+				{
+					num2 = 5f;
+				}
+			}
+			IL_14F:
+			float attackValue = this.GetAttackValue();
+			float num3 = this.LocalForcesBaseDefenseLevel(true);
+			float combatSuccessChance = this.GetCombatSuccessChance(inFriendlyRegion ? attackValue : num3, inFriendlyRegion ? num3 : attackValue);
+			this.currentRegion.ApplyDamageToRegion(Mathf.Max(1f, 12f - attackValue) * this.regionDamageScaling, this.faction, this.homeNation, false, false, false, false);
+			float num4 = Mathf.Pow(this.currentRegion.populationInMillions, 0.75f) / Mathf.Pow(TIGlobalValuesState.GlobalValues.averageRegionPopulation, 0.75f);
+			float num5 = Mathf.Pow(this.currentRegion.mapRegionTemplate.area_km2, 0.5f) / Mathf.Pow(TIGlobalValuesState.GlobalValues.medianRegionArea, 0.5f);
+			float num6 = (num4 + num5) / 2f;
+			num6 = 1f / num6;
+			if (UnityEngine.Random.value >= combatSuccessChance)
+			{
+				if (!regionReturnFireOnly)
+				{
+					if (!inFriendlyRegion)
+					{
+						if (count2 == 0)
+						{
+							float num7 = 0.8f + UnityEngine.Random.Range(0f, 0.4f);
+							float num8 = Mathf.Max(attackValue - this.currentNation.militaryTechLevel - this.currentNation.adviserCommandBonus, 0f);
+							float num9 = (attackValue + num8) * 0.0005f * num6 * num2 * num7;
+							float num10 = (float)count - this.currentRegion.mapRegionTemplate.area_km2 / 100000f;
+							if (num10 > 0f)
+							{
+								num9 *= Mathf.Max(0.5f, 1f - num10 * 0.02f);
+							}
+							num9 = Mathf.Min(0.1f, num9);
+							this.currentRegion.IncreaseOccupationValue(this.homeNation, num9, this);
+						}
+					}
+					else
+					{
+						float num11 = 0.8f + UnityEngine.Random.Range(0f, 0.4f);
+						float num12 = attackValue;
+						TINationState leadOccupier = this.currentRegion.leadOccupier;
+						float num13 = num12 - ((leadOccupier != null) ? leadOccupier.militaryTechLevel : 0f);
+						TINationState leadOccupier2 = this.currentRegion.leadOccupier;
+						float num14 = Mathf.Max(num13 - ((leadOccupier2 != null) ? leadOccupier2.adviserCommandBonus : 0f), 0f);
+						float num15 = (attackValue + num14) * 0.0005f * num6 * num2 * ((count == 0) ? (1f + num11) : num11);
+						num15 = Mathf.Min(0.1f, num15);
+						this.currentRegion.IncreaseOccupationValue(getOccupierNation, -num15, this);
+					}
+					if (this.armyType == ArmyType.AlienInvader && num2 > 1f)
+					{
+						this.currentRegion.ConductAbductions(this.faction, 1);
+					}
+				}
+				return;
+			}
+			float num16 = num3 * 0.0005f * num2 * (0.8f + UnityEngine.Random.Range(0f, 0.4f));
+			num16 += TIEffectsState.SumEffectsModifiers(Context.ArmyDamageBonustoAllArmies, this.currentRegion.nation.executiveFaction, num16);
+			if (!inFriendlyRegion)
+			{
+				ArmyType armyType = this.armyType;
+				if (armyType != ArmyType.Human)
+				{
+					if (armyType == ArmyType.AlienInvader)
+					{
+						num16 += TIEffectsState.SumEffectsModifiers(Context.ArmyDamageBonustoInvaderArmy, this.currentNation.executiveFaction, num16);
+					}
+				}
+				else
+				{
+					num16 += TIEffectsState.SumEffectsModifiers(Context.ArmyDamageBonustoHumanArmy, this.currentNation.executiveFaction, num16);
+				}
+			}
+			float num17 = (float)(inFriendlyRegion ? (count2 - count) : (count - count2));
+			if (num17 > 0f)
+			{
+				num16 *= 1f - num17 / (num17 + 2f);
+			}
+			float num18;
+			if (this.armyType == ArmyType.AlienMegafauna)
+			{
+				num18 = 0f;
+			}
+			else if (!inFriendlyRegion)
+			{
+				if (!this.currentRegion.occupations.ContainsKey(this.homeNation) || this.currentRegion.occupations[this.homeNation] <= 0f)
+				{
+					num18 = 0f;
+				}
+				else if (count == 0)
+				{
+					num18 = 1f;
+				}
+				else
+				{
+					float num19 = this.currentRegion.occupations[this.homeNation];
+					float num20 = (float)count * list.Average((TIArmyState x) => x.strength);
+					num18 = num19 / num20;
+				}
+			}
+			else if (count == 0)
+			{
+				num18 = 1f;
+			}
+			else if (count2 > 0)
+			{
+				float num21 = (float)count2 * list2.Average((TIArmyState x) => x.strength);
+				float num22 = (float)count * list.Average((TIArmyState x) => x.strength) * ((getOccupierNation != null) ? this.currentRegion.occupations[getOccupierNation] : 1f);
+				num18 = num21 / num22;
+			}
+			else
+			{
+				num18 = 0f;
+			}
+			if (UnityEngine.Random.value < num18)
+			{
+				if (!inFriendlyRegion)
+				{
+					float num23 = 0.8f + UnityEngine.Random.Range(0f, 0.4f);
+					float num24 = Mathf.Min(0.1f, num3 * 0.0005f * num2 * num6 * num23);
+					this.currentRegion.IncreaseOccupationValue(this.homeNation, -num24, null);
+					this.TakeDamage(num16, this.currentRegion.ref_faction, this.currentRegion.nation);
+					return;
+				}
+				float num25 = 0.8f + UnityEngine.Random.Range(0f, 0.4f);
+				float num26 = Mathf.Min(0.1f, Mathf.Max(1f, this.currentRegion.nation.cohesion - this.currentRegion.nation.unrest) * attackValue * 0.0005f * num2 * num6 * num25);
+				this.currentRegion.IncreaseOccupationValue(getOccupierNation, -num26, null);
+				this.TakeDamage(num16 * (1.1f - this.currentNation.cohesion), (getOccupierNation != null) ? getOccupierNation.ref_faction : null, getOccupierNation);
+				return;
+			}
+			else
+			{
+				if (!inFriendlyRegion)
+				{
+					this.TakeDamage(2f * num16, this.currentRegion.ref_faction, this.currentRegion.nation);
+					return;
+				}
+				this.TakeDamage((2f - this.currentNation.cohesion) * num16, (getOccupierNation != null) ? getOccupierNation.ref_faction : null, getOccupierNation);
+				return;
+			}
+		}
+
+        //public void EngageLocalForcesAndOccupy(bool regionReturnFireOnly = false)
+        //{
+        //    if (this.atSea)
+        //    {
+        //        return;
+        //    }
+        //    List<TIArmyState> list = this.currentRegion.FilteredArmiesPresent(false, false, true, false);
+        //    int count = list.Count;
+        //    List<TIArmyState> list2 = this.currentRegion.FilteredArmiesPresent(true, true, false, false);
+        //    int count2 = list2.Count;
+        //    TINationState getOccupierNation = this.GetOccupierNation;
+        //    float num;
+        //    if (this.InFriendlyRegion)
+        //    {
+        //        num = 0.01f * (float)count2 * (float)count2;
+        //    }
+        //    else
+        //    {
+        //        num = 0.01f * (float)count * (float)count;
+        //    }
+        //    float num2 = ((this.strength == 1f && (!this.currentRegion.occupations.ContainsKey(this.homeNation) || this.currentRegion.occupations[this.homeNation] <= 0f)) || UnityEngine.Random.value < num) ? 40f : 1f;
+        //    if (!this.AlienMegafaunaArmy)
+        //    {
+        //        if (this.strength == 1f)
+        //        {
+        //            if (this.currentRegion.occupations.Count<KeyValuePair<TINationState, float>>() != 0)
+        //            {
+        //                if (!this.currentRegion.occupations.All((KeyValuePair<TINationState, float> x) => x.Value <= 0f))
+        //                {
+        //                    goto IL_120;
+        //                }
+        //            }
+        //            num2 = 100f;
+        //            goto IL_149;
+        //        }
+        //    IL_120:
+        //        float value = UnityEngine.Random.value;
+        //        if (value < num)
+        //        {
+        //            num2 = 40f;
+        //        }
+        //        else if (value < num * 2f)
+        //        {
+        //            num2 = 5f;
+        //        }
+        //    }
+        //IL_149:
+        //    float attackValue = this.GetAttackValue();
+        //    float num3 = this.LocalForcesBaseDefenseLevel(true);
+        //    bool inFriendlyRegion = this.InFriendlyRegion;
+        //    float combatSuccessChance = this.GetCombatSuccessChance(inFriendlyRegion ? attackValue : num3, inFriendlyRegion ? num3 : attackValue);
+        //    this.currentRegion.ApplyDamageToRegion(Mathf.Max(1f, 12f - attackValue) * this.regionDamageScaling, this.faction, this.homeNation, false, false, false, false);
+        //    float num4 = Mathf.Pow(this.currentRegion.populationInMillions, 0.75f) / Mathf.Pow(TIGlobalValuesState.GlobalValues.averageRegionPopulation, 0.75f);
+        //    float num5 = Mathf.Pow(this.currentRegion.mapRegionTemplate.area_km2, 0.75f) / Mathf.Pow(TIGlobalValuesState.GlobalValues.medianRegionArea, 0.75f);
+        //    float num6 = 1f / ((num4 + num5) * 0.5f);
+        //    if (UnityEngine.Random.value >= combatSuccessChance)
+        //    {
+        //        if (!regionReturnFireOnly)
+        //        {
+        //            if (!inFriendlyRegion)
+        //            {
+        //                if (count2 == 0)
+        //                {
+        //                    float num7 = 0.8f + UnityEngine.Random.Range(0f, 0.4f);
+        //                    float num8 = attackValue * 0.0005f * num6 * num2 * num7;
+        //                    float num9 = (float)count - this.currentRegion.mapRegionTemplate.area_km2 / 100000f;
+        //                    if (num9 > 0f)
+        //                    {
+        //                        num8 *= Mathf.Max(0.5f, 1f - num9 * 0.02f);
+        //                    }
+        //                    num8 = Mathf.Min(0.1f, num8);
+        //                    this.currentRegion.IncreaseOccupationValue(this.homeNation, num8, this);
+        //                }
+        //            }
+        //            else
+        //            {
+        //                float num10 = 0.8f + UnityEngine.Random.Range(0f, 0.4f);
+        //                float num11 = attackValue * 0.000225f * num6 * num2 * ((count == 0) ? (1f + num10) : num10);
+        //                num11 = Mathf.Min(0.1f, num11);
+        //                this.currentRegion.IncreaseOccupationValue(getOccupierNation, -num11, this);
+        //            }
+        //            if (this.armyType == ArmyType.AlienInvader && num2 > 1f)
+        //            {
+        //                this.currentRegion.ConductAbductions(this.faction, 1);
+        //            }
+        //        }
+        //        return;
+        //    }
+        //    float num12 = num3 * 0.000225f * num2 * (0.8f + UnityEngine.Random.Range(0f, 0.4f));
+        //    num12 += TIEffectsState.SumEffectsModifiers(Context.ArmyDamageBonustoAllArmies, this.currentRegion.nation.executiveFaction, num12);
+        //    if (!inFriendlyRegion)
+        //    {
+        //        ArmyType armyType = this.armyType;
+        //        if (armyType != ArmyType.Human)
+        //        {
+        //            if (armyType == ArmyType.AlienInvader)
+        //            {
+        //                num12 += TIEffectsState.SumEffectsModifiers(Context.ArmyDamageBonustoInvaderArmy, this.currentNation.executiveFaction, num12);
+        //            }
+        //        }
+        //        else
+        //        {
+        //            num12 += TIEffectsState.SumEffectsModifiers(Context.ArmyDamageBonustoHumanArmy, this.currentNation.executiveFaction, num12);
+        //        }
+        //    }
+        //    float num13 = (float)(inFriendlyRegion ? (count2 - count) : (count - count2));
+        //    if (num13 > 0f)
+        //    {
+        //        num12 *= 1f - num13 / (num13 + 2f);
+        //    }
+        //    float num14;
+        //    if (this.armyType == ArmyType.AlienMegafauna)
+        //    {
+        //        num14 = 0f;
+        //    }
+        //    else if (!inFriendlyRegion)
+        //    {
+        //        if (!this.currentRegion.occupations.ContainsKey(this.homeNation) || this.currentRegion.occupations[this.homeNation] <= 0f)
+        //        {
+        //            num14 = 0f;
+        //        }
+        //        else if (count == 0 || list.Count == 0)
+        //        {
+        //            num14 = 1f;
+        //        }
+        //        else
+        //        {
+        //            float num15 = this.currentRegion.occupations[this.homeNation];
+        //            float num16 = (float)count * list.Average((TIArmyState x) => x.strength);
+        //            num14 = num15 / num16;
+        //        }
+        //    }
+        //    else if (count == 0)
+        //    {
+        //        num14 = 1f;
+        //    }
+        //    else
+        //    {
+        //        float num17 = (float)count2 * list2.Average((TIArmyState x) => x.strength);
+        //        float num18 = (float)count * list.Average((TIArmyState x) => x.strength) * ((getOccupierNation != null) ? this.currentRegion.occupations[getOccupierNation] : 1f);
+        //        num14 = num17 / num18;
+        //    }
+        //    if (UnityEngine.Random.value < num14)
+        //    {
+        //        if (!inFriendlyRegion)
+        //        {
+        //            float num19 = 0.8f + UnityEngine.Random.Range(0f, 0.4f);
+        //            float num20 = Mathf.Min(0.1f, num3 * 0.000225f * num2 * num6 * num19);
+        //            this.currentRegion.IncreaseOccupationValue(this.homeNation, -num20, null);
+        //            this.TakeDamage(num12 / 4, this.currentRegion.ref_faction, this.currentRegion.nation);
+        //            return;
+        //        }
+        //        float num21 = 0.8f + UnityEngine.Random.Range(0f, 0.4f);
+        //        float num22 = Mathf.Min(0.1f, Mathf.Max(1f, this.currentRegion.nation.cohesion - this.currentRegion.nation.unrest) * attackValue * 0.000225f * num2 * num6 * num21);
+        //        this.currentRegion.IncreaseOccupationValue(getOccupierNation, -num22, null);
+        //        this.TakeDamage(num12 / 4 * (1.1f - this.currentNation.cohesion), (getOccupierNation != null) ? getOccupierNation.ref_faction : null, getOccupierNation);
+        //        return;
+        //    }
+        //    else
+        //    {
+        //        if (!inFriendlyRegion)
+        //        {
+        //            this.TakeDamage(0.5f * num12, this.currentRegion.ref_faction, this.currentRegion.nation);
+        //            return;
+        //        }
+        //        this.TakeDamage((0.5f - this.currentNation.cohesion) * num12, (getOccupierNation != null) ? getOccupierNation.ref_faction : null, getOccupierNation);
+        //        return;
+        //    }
+        //}
         private int reachableRegionsCachedFrame = -1;
         private HashSet<TIRegionState> cachedReachableRegions = new HashSet<TIRegionState>();
 

@@ -25,7 +25,7 @@ namespace PavonisInteractive.TerraInvicta
 
             switch (mType)
             {
-                case MarkerType.Army:
+                //case MarkerType.Army:
                 case MarkerType.HumanLaserFacility:
                 case MarkerType.HumanMissionControlFacility:
                 case MarkerType.HumanLaunchFacility:
@@ -88,7 +88,7 @@ namespace PavonisInteractive.TerraInvicta
 
                     if (completedMission != null && completedMission.missionTemplate.dataName == "Advise_Statesman")
                     {
-                        double Attribute = ticouncilorState2.GetAttribute(CouncilorAttribute.Administration);
+                        double Attribute = ticouncilorState2.GetAttribute(CouncilorAttribute.Administration, false, true, false, false);
                         //Log.Debug($"Initial Attribute {Attribute}");
                         Attribute = Attribute * 0.333;
                         //Log.Debug($"The Deductions {Attribute}");
@@ -99,7 +99,7 @@ namespace PavonisInteractive.TerraInvicta
                     }
                     if (completedMission != null && completedMission.missionTemplate.dataName == "Advise_Scientist")
                     {
-                        double Attribute = ticouncilorState2.GetAttribute(CouncilorAttribute.Science);
+                        double Attribute = ticouncilorState2.GetAttribute(CouncilorAttribute.Science, false, true, false, false);
                         Attribute = Attribute * 0.333;
                         Attribute = Math.Round(Attribute);
                         ticouncilorState2.ModifyAttribute(CouncilorAttribute.Science, -(int)Attribute);
@@ -112,11 +112,11 @@ namespace PavonisInteractive.TerraInvicta
 
                     if (completedMission != null && completedMission.missionTemplate.dataName == "Advise_Super")
                     {
-                        double Attribute2 = ticouncilorState2.GetAttribute(CouncilorAttribute.Administration);
+                        double Attribute2 = ticouncilorState2.GetAttribute(CouncilorAttribute.Administration, false, true, false, false);
                         Attribute2 = Attribute2 * 0.333;
                         Attribute2 = Math.Round(Attribute2);
                         ticouncilorState2.ModifyAttribute(CouncilorAttribute.Administration, -(int)Attribute2);
-                        double Attribute = ticouncilorState2.GetAttribute(CouncilorAttribute.Science);
+                        double Attribute = ticouncilorState2.GetAttribute(CouncilorAttribute.Science, false, true, false, false);
                         Attribute = Attribute * 0.333;
                         Attribute = Math.Round(Attribute);
                         ticouncilorState2.ModifyAttribute(CouncilorAttribute.Science, -(int)Attribute);

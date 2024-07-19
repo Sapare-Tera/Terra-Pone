@@ -41,84 +41,86 @@ public abstract class patch_TIOperationTemplate : TIOperationTemplate, IOperatio
 
     public static class OperationsManager
 {
-    public static void Initalize()
-    {
-        OperationsManager.armyOperations.Clear();
-        OperationsManager.fleetOperations.Clear();
-        OperationsManager.spaceOperations.Clear();
-        OperationsManager.nationOperations.Clear();
-        OperationsManager.operationsLookup.Clear();
-        OperationsManager.armyOperations.Add(new TeleportArmyOperation());
-        OperationsManager.armyOperations.Add(new DeployArmyOperation(false));
-        OperationsManager.armyOperations.Add(new DeployArmiesOperation(false));
-        OperationsManager.armyOperations.Add(new ArmyGoHomeOperation());
-        OperationsManager.armyOperations.Add(new AllArmiesGoHomeOperation());
-        OperationsManager.armyOperations.Add(new AssaultAlienAssetOperation());
-        OperationsManager.armyOperations.Add(new AssaultSpaceFacilityOperation());
-        OperationsManager.armyOperations.Add(new AnnexRegionOperation());
-        OperationsManager.armyOperations.Add(new RazeRegionOperation());        
-        OperationsManager.armyOperations.Add(new CancelArmyOperation());
-        OperationsManager.fleetOperations.Add(new TransferOperation());
-        OperationsManager.fleetOperations.Add(new BombardOperation_Low());
-        OperationsManager.fleetOperations.Add(new BombardOperation_Med());
-        OperationsManager.fleetOperations.Add(new BombardOperation_High());
-        OperationsManager.fleetOperations.Add(new AssaultHabOperation());
-        OperationsManager.fleetOperations.Add(new DestroyHabOperation());
-        OperationsManager.fleetOperations.Add(new MergeFleetOperation());
-        OperationsManager.fleetOperations.Add(new MergeAllFleetOperation());
-        OperationsManager.fleetOperations.Add(new SplitFleetOperation());
-        OperationsManager.fleetOperations.Add(new ResupplyAndRepairOperation());
-        OperationsManager.fleetOperations.Add(new ResupplyOperation());
-        OperationsManager.fleetOperations.Add(new RepairFleetOperation());
-        OperationsManager.fleetOperations.Add(new InterfleetRefuelOperation());
-        OperationsManager.fleetOperations.Add(new LandOnSurfaceOperation());
-        OperationsManager.fleetOperations.Add(new LaunchFromSurfaceOperation());
-        OperationsManager.fleetOperations.Add(new UndockFromStationOperation());
-        OperationsManager.fleetOperations.Add(new SurveyPlanetFromFleetOperation());
-        OperationsManager.fleetOperations.Add(new FoundSolarPlatformOperation());
-        OperationsManager.fleetOperations.Add(new FoundFissionPlatformOperation());
-        OperationsManager.fleetOperations.Add(new FoundFusionPlatformOperation());
-        OperationsManager.fleetOperations.Add(new FoundSolarOutpostOperation());
-        OperationsManager.fleetOperations.Add(new FoundFissionOutpostOperation());
-        OperationsManager.fleetOperations.Add(new FoundFusionOutpostOperation());
-        OperationsManager.fleetOperations.Add(new FoundAutomatedSolarPlatformOperation());
-        OperationsManager.fleetOperations.Add(new FoundAutomatedFissionPlatformOperation());
-        OperationsManager.fleetOperations.Add(new FoundAutomatedSolarOutpostOperation());
-        OperationsManager.fleetOperations.Add(new FoundAutomatedFissionOutpostOperation());
-        OperationsManager.fleetOperations.Add(new ScuttleShipsOperation());
-        OperationsManager.fleetOperations.Add(new SetHomeportOperation());
-        OperationsManager.fleetOperations.Add(new ClearHomeportOperation());
-        OperationsManager.fleetOperations.Add(new AlienEarthSurveillanceOperation());
-        OperationsManager.fleetOperations.Add(new AlienCrashdownOperation());
-        OperationsManager.fleetOperations.Add(new AlienLandArmyOperation());
-        OperationsManager.fleetOperations.Add(new CancelFleetOperation());
-        OperationsManager.spaceOperations.Add(new LaunchProbeOperation());
-        OperationsManager.spaceOperations.Add(new FoundPlatformOperation());
-        OperationsManager.spaceOperations.Add(new FoundOrbitalOperation());
-        OperationsManager.spaceOperations.Add(new FoundRingOperation());
-        OperationsManager.spaceOperations.Add(new FoundOutpostOperation());
-        OperationsManager.spaceOperations.Add(new FoundSettlementOperation());
-        OperationsManager.spaceOperations.Add(new FoundColonyOperation());
-        OperationsManager.spaceOperations.Add(new FoundAutomatedPlatformOperation());
-        OperationsManager.spaceOperations.Add(new FoundAutomatedOutpostOperation());
-        OperationsManager.nationOperations.Add(new NuclearWeaponsStrike());
-        foreach (IOperation operation in OperationsManager.armyOperations)
+        public static void Initalize()
         {
-            OperationsManager.operationsLookup.Add(operation.GetType(), operation);
+            OperationsManager.armyOperations.Clear();
+            OperationsManager.fleetOperations.Clear();
+            OperationsManager.spaceOperations.Clear();
+            OperationsManager.nationOperations.Clear();
+            OperationsManager.operationsLookup.Clear();
+            OperationsManager.armyOperations.Add(new TeleportArmyOperation());
+            OperationsManager.armyOperations.Add(new DeployArmyOperation_OpenTarget(false));
+            OperationsManager.armyOperations.Add(new DeployArmiesOperation(false));
+            OperationsManager.armyOperations.Add(new ArmyGoHomeOperation());
+            OperationsManager.armyOperations.Add(new AllArmiesGoHomeOperation());
+            OperationsManager.armyOperations.Add(new DeployArmyOperation_TargetHome());
+            OperationsManager.armyOperations.Add(new AllArmiesPathHomeOperation());
+            OperationsManager.armyOperations.Add(new AssaultAlienAssetOperation());
+            OperationsManager.armyOperations.Add(new AssaultSpaceFacilityOperation());
+            OperationsManager.armyOperations.Add(new AnnexRegionOperation());
+            OperationsManager.armyOperations.Add(new RazeRegionOperation());
+            OperationsManager.armyOperations.Add(new CancelArmyOperation());
+            OperationsManager.fleetOperations.Add(new TransferOperation());
+            OperationsManager.fleetOperations.Add(new BombardOperation_Low());
+            OperationsManager.fleetOperations.Add(new BombardOperation_Med());
+            OperationsManager.fleetOperations.Add(new BombardOperation_High());
+            OperationsManager.fleetOperations.Add(new AssaultHabOperation());
+            OperationsManager.fleetOperations.Add(new DestroyHabOperation());
+            OperationsManager.fleetOperations.Add(new MergeFleetOperation());
+            OperationsManager.fleetOperations.Add(new MergeAllFleetOperation());
+            OperationsManager.fleetOperations.Add(new SplitFleetOperation());
+            OperationsManager.fleetOperations.Add(new ResupplyAndRepairOperation());
+            OperationsManager.fleetOperations.Add(new ResupplyOperation());
+            OperationsManager.fleetOperations.Add(new RepairFleetOperation());
+            OperationsManager.fleetOperations.Add(new InterfleetRefuelOperation());
+            OperationsManager.fleetOperations.Add(new LandOnSurfaceOperation());
+            OperationsManager.fleetOperations.Add(new LaunchFromSurfaceOperation());
+            OperationsManager.fleetOperations.Add(new UndockFromStationOperation());
+            OperationsManager.fleetOperations.Add(new SurveyPlanetFromFleetOperation());
+            OperationsManager.fleetOperations.Add(new FoundSolarPlatformOperation());
+            OperationsManager.fleetOperations.Add(new FoundFissionPlatformOperation());
+            OperationsManager.fleetOperations.Add(new FoundFusionPlatformOperation());
+            OperationsManager.fleetOperations.Add(new FoundSolarOutpostOperation());
+            OperationsManager.fleetOperations.Add(new FoundFissionOutpostOperation());
+            OperationsManager.fleetOperations.Add(new FoundFusionOutpostOperation());
+            OperationsManager.fleetOperations.Add(new FoundAutomatedSolarPlatformOperation());
+            OperationsManager.fleetOperations.Add(new FoundAutomatedFissionPlatformOperation());
+            OperationsManager.fleetOperations.Add(new FoundAutomatedSolarOutpostOperation());
+            OperationsManager.fleetOperations.Add(new FoundAutomatedFissionOutpostOperation());
+            OperationsManager.fleetOperations.Add(new ScuttleShipsOperation());
+            OperationsManager.fleetOperations.Add(new SetHomeportOperation());
+            OperationsManager.fleetOperations.Add(new ClearHomeportOperation());
+            OperationsManager.fleetOperations.Add(new AlienEarthSurveillanceOperation());
+            OperationsManager.fleetOperations.Add(new AlienCrashdownOperation());
+            OperationsManager.fleetOperations.Add(new AlienLandArmyOperation());
+            OperationsManager.fleetOperations.Add(new CancelFleetOperation());
+            OperationsManager.spaceOperations.Add(new LaunchProbeOperation());
+            OperationsManager.spaceOperations.Add(new FoundPlatformOperation());
+            OperationsManager.spaceOperations.Add(new FoundOrbitalOperation());
+            OperationsManager.spaceOperations.Add(new FoundRingOperation());
+            OperationsManager.spaceOperations.Add(new FoundOutpostOperation());
+            OperationsManager.spaceOperations.Add(new FoundSettlementOperation());
+            OperationsManager.spaceOperations.Add(new FoundColonyOperation());
+            OperationsManager.spaceOperations.Add(new FoundAutomatedPlatformOperation());
+            OperationsManager.spaceOperations.Add(new FoundAutomatedOutpostOperation());
+            OperationsManager.nationOperations.Add(new NuclearWeaponsStrike());
+            foreach (IOperation operation in OperationsManager.armyOperations)
+            {
+                OperationsManager.operationsLookup.Add(operation.GetType(), operation);
+            }
+            foreach (IOperation operation2 in OperationsManager.fleetOperations)
+            {
+                OperationsManager.operationsLookup.Add(operation2.GetType(), operation2);
+            }
+            foreach (IOperation operation3 in OperationsManager.spaceOperations)
+            {
+                OperationsManager.operationsLookup.Add(operation3.GetType(), operation3);
+            }
+            foreach (IOperation operation4 in OperationsManager.nationOperations)
+            {
+                OperationsManager.operationsLookup.Add(operation4.GetType(), operation4);
+            }
         }
-        foreach (IOperation operation2 in OperationsManager.fleetOperations)
-        {
-            OperationsManager.operationsLookup.Add(operation2.GetType(), operation2);
-        }
-        foreach (IOperation operation3 in OperationsManager.spaceOperations)
-        {
-            OperationsManager.operationsLookup.Add(operation3.GetType(), operation3);
-        }
-        foreach (IOperation operation4 in OperationsManager.nationOperations)
-        {
-            OperationsManager.operationsLookup.Add(operation4.GetType(), operation4);
-        }
-    }
 
     // Token: 0x04000CE4 RID: 3300
     public static List<IOperation> armyOperations = new List<IOperation>();
@@ -487,8 +489,6 @@ public class patch_TIHabModuleTemplate : TIHabModuleTemplate
             magic = this.weightedBuildMaterials.magic * num * TemplateManager.global.spaceResourceToTons * multiplier
         };
     }
-
-    //public override abstract TIResourcesCost buildCost(float value = 0f, float value2 = 0f);
     public TIResourcesCost CostFromEarth(TIFactionState faction, TIGameState destinationState, bool isUpgrade)
     {
         float irradiatedValue = TIUtilities.IrradiatedMultiplier(destinationState);
@@ -534,21 +534,21 @@ public class patch_TIHabModuleTemplate : TIHabModuleTemplate
 
     public TIResourcesCost CostFromSpace(TIFactionState faction, TIGameState destinationState, bool isUpgrade, bool substituteBoost, int maxDaysToSave = 0, bool dontRecalculateIncome = false)
     {
-        //  int canFoundLocally = faction.MaxTierCanFoundAtLocation(destinationState, false, false);
-        //  if (canFoundLocally >= 1)
-        //  {
         float irradiatedValue = TIUtilities.IrradiatedMultiplier(destinationState);
         float num = isUpgrade ? this.upgradeDiscount : 1f;
         TISpaceBodyState ref_spaceBody = destinationState.ref_spaceBody;
         float num2 = 1f;
+        bool canFoundLocally = faction.CanFoundHabFromHabAtLocation(destinationState, false, false);
         float pass = 99f;
         TIHabState tihabState = null;
-        if (destinationState.isHabSiteState)
+        bool ConstructionModule = (this.upgradesFromName == "ConstructionModule" || this.upgradesFromName == "Nanofactory") && isUpgrade;
+
+        if ((destinationState.isHabSiteState ||  destinationState.isOrbitState) && canFoundLocally)
         {
-            ref_spaceBody = destinationState.ref_habSite.ref_spaceBody;
             pass = 1f;
         }
-        else if (destinationState.isHabState)
+
+       if (destinationState.isHabState)
         {
             tihabState = destinationState.ref_hab;
             num2 = tihabState.GetModuleConstructionTimeModifier(false);
@@ -558,7 +558,7 @@ public class patch_TIHabModuleTemplate : TIHabModuleTemplate
             }
         }
 
-        if (num2 < 1 || pass == 1)
+        if ((canFoundLocally == true && (this.tier == 1 || this.dataName == "OrbitalCore" || this.dataName == "SettlementCore") || (num2 < 1  && this.tier == 1) || (num2 < 0.85 && this.tier == 2) ||  (num2 < 0.7 && this.tier == 3) || ConstructionModule) || pass == 1 || (this.dataName == "OrbitalCore" || this.dataName == "SettlementCore" && num2 < 1) || (this.dataName == "ColonyCore" || this.dataName == "RingCore" && num2 < 0.85))
         {
             TIResourcesCost tiresourcesCost = this.BuildMaterials(irradiatedValue, ref_spaceBody, faction, num).ToResourcesCost(1f);
             float num3 = 0f;
@@ -601,7 +601,6 @@ public class patch_TIHabModuleTemplate : TIHabModuleTemplate
             return tiresourcesCost;
         }
     }
-    //  }      
 }
 
     public class patch_StartMenuController : StartMenuController

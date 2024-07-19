@@ -66,6 +66,8 @@ namespace PavonisInteractive.TerraInvicta
 
     public class patch_TIFactionState : TIFactionState
     {
+
+
         [fsIgnore]
         private Dictionary<TIObjectiveTemplate, ObjectiveStatus> objectives;
         [fsProperty]
@@ -115,26 +117,6 @@ namespace PavonisInteractive.TerraInvicta
         public List<PolicyOptionWithTarget> plannedPolicies { get; private set; }
 
         public Dictionary<string, float> techNameContributionHistory { get; private set; }
-
-        //[MonoModOriginal] public extern bool orig_Initialize();
-        //public override bool Initialize()
-        //{
-        //    bool returnVal = orig_Initialize();
-        //    this.resources = new Dictionary<patch_FactionResource, float>(15);
-        //    //this.baseIncomes_year = new Dictionary<patch_FactionResource, float>();
-        //    return returnVal;
-        //}
-
-        //[MonoModIgnore] private Dictionary<TechCategory, float> cachedBaseHabsMultipliers = new Dictionary<TechCategory, float>();
-        //[MonoModIgnore] private Dictionary<TechCategory, int> baseHabsMultiplierCachedFrames;
-        //[MonoModIgnore] private Dictionary<TechCategory, float> cachedTraitsMultiplier = new Dictionary<TechCategory, float>();
-        //[MonoModIgnore] private Dictionary<TechCategory, int> traitsMultiplierCachedFrame = Enums.TechCategories.ToDictionary((TechCategory x) => x, (TechCategory x) => -1);
-        //[MonoModIgnore] private Dictionary<patch_TechCategory, float> cachedOrgsMultiplier = new Dictionary<patch_TechCategory, float>();
-        //[MonoModIgnore] private Dictionary<TechCategory, int> orgsMultiplierCachedFrame = Enums.TechCategories.ToDictionary((TechCategory x) => x, (TechCategory x) => -1);
-        //[MonoModIgnore] private Dictionary<TechCategory, float> cachedFleetsModifier = new Dictionary<TechCategory, float>();
-        //[MonoModIgnore] private Dictionary<TechCategory, int> fleetsModifierCachedFrame = Enums.TechCategories.ToDictionary((TechCategory x) => x, (TechCategory x) => -1);
-        //[SerializeField]
-
 
         public TradeOffer GetAIGiveOffer(patch_TIFactionState offerReciever, patch_TIFactionState offerSender, TradeOffer decidedWantOffer)
 		{
@@ -385,14 +367,94 @@ namespace PavonisInteractive.TerraInvicta
             return patch_TIResourcesCost.resourcesAllowedToGoNegative.Contains(resourceType);
         }
 
+
+
+        private Dictionary<TechCategory, int> traitsMultiplierCachedFrame = Enums.TechCategories.ToDictionary((TechCategory x) => x, (TechCategory x) => -1);
+
+        private Dictionary<TechCategory, float> cachedTraitsMultiplier = new Dictionary<TechCategory, float>();
+
+        private Dictionary<TechCategory, float> cachedFleetsModifier = new Dictionary<TechCategory, float>();
+
+
+        private Dictionary<TechCategory, int> fleetsModifierCachedFrame = Enums.TechCategories.ToDictionary((TechCategory x) => x, (TechCategory x) => -1);
+
+        public float TraitsMultiplier2(TechCategory techCategory)
+        {
+            if (this.fleetsModifierCachedFrame[TechCategory.Xenology] != Time.frameCount)
+            {
+                float num = 0f;
+                foreach (TICouncilorState ticouncilorState in from x in this.councilors
+                                                              where x.active
+                                                              select x)
+                {
+                    foreach (patch_TITraitTemplate titraitTemplate in ticouncilorState.traits)
+                    {
+                        for (int i = 0; i < titraitTemplate.techBonuses.Length; i++)
+                        {
+                            if (titraitTemplate.techBonuses[i].category == patch_TechCategory.MagicScience)
+                            {
+                                num += titraitTemplate.techBonuses[i].bonus;
+                            }
+                        }
+                    }
+                }
+                if (num > 0.5f)
+                {
+                    float num2 = num - 0.5f;
+                    num = 0.5f + 0.5f * (num2 / (num2 + 2f));
+                }
+                this.cachedFleetsModifier[TechCategory.Xenology] = num;
+                this.fleetsModifierCachedFrame[TechCategory.Xenology] = Time.frameCount;
+            }
+            return this.cachedFleetsModifier[TechCategory.Xenology];
+        }
+
+        public float OrgsMultiplier2(TechCategory techCategory)
+        {
+            if (this.fleetsModifierCachedFrame[TechCategory.LifeScience] != Time.frameCount)
+            {
+                this.cachedFleetsModifier[TechCategory.LifeScience] = 0f;
+                foreach (TICouncilorState ticouncilorState in from x in this.councilors
+                                                              where x.active
+                                                              select x)
+                {
+                    foreach (TIOrgState tiorgState in ticouncilorState.activeOrgs)
+                    {
+                        for (int i = 0; i < tiorgState.techBonuses.Length; i++)
+                        {
+                            if (tiorgState.techBonuses[i].category == (TechCategory)patch_TechCategory.MagicScience)
+                            {
+                                Dictionary<TechCategory, float> dictionary = this.cachedFleetsModifier;
+                                dictionary[TechCategory.LifeScience] += tiorgState.techBonuses[i].bonus;
+                            }
+                        }
+                    }
+                }
+                if (this.cachedFleetsModifier[TechCategory.LifeScience] > 0.5f)
+                {
+                    float num = this.cachedFleetsModifier[TechCategory.LifeScience] - 0.5f;
+                    this.cachedFleetsModifier[TechCategory.LifeScience] = 0.5f + 0.5f * (num / (num + 2f));
+                }
+                this.fleetsModifierCachedFrame[TechCategory.LifeScience] = Time.frameCount;
+            }
+            return this.cachedFleetsModifier[TechCategory.LifeScience];
+        }
+
+
         public float SumCategoryModifiers(TechCategory category)
         {
-            switch ((patch_TechCategory)category)
+            switch (category)
             {
-                case patch_TechCategory.MagicScience:
-                    return 0f;
-                default:
+                case (TechCategory)patch_TechCategory.MagicScience:
+                    //Log.Debug($"{category}");
+                    //Log.Debug($"2-{(TechCategory)patch_TechCategory.MagicScience}");
+                    return this.HabsMultiplier(category) + this.TraitsMultiplier2((TechCategory)patch_TechCategory.MagicScience) + OrgsMultiplier2((TechCategory)patch_TechCategory.MagicScience);
+
+                case TechCategory.SpaceScience:
                     return this.HabsMultiplier(category) + this.OrgsMultiplier(category) + this.TraitsMultiplier(category) + this.InvestigationsModifier(category) + this.FleetsModifier(category);
+                default:
+                // Log.Debug($"default  -  {category}");
+                    return this.HabsMultiplier(category) + this.OrgsMultiplier(category) + this.TraitsMultiplier(category) + this.InvestigationsModifier(category);
             }
         }
 

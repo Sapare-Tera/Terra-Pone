@@ -392,6 +392,8 @@ namespace PavonisInteractive.TerraInvicta
             return aug;
         }
 
+        public int Adminholder = 0;
+
         public extern List<CouncilorAugmentationOption> orig_GetCandidateAugmentations();
         public List<CouncilorAugmentationOption> GetCandidateAugmentations()
         {
@@ -564,10 +566,10 @@ namespace PavonisInteractive.TerraInvicta
     }
     //public static class patch_Enums
     //{
-    //    public static readonly patch_FactionResource[] FactionResources = ((patch_FactionResource[])Enum.GetValues(typeof(patch_FactionResource))).Except(new patch_FactionResource[1]).ToArray<patch_FactionResource>();
+    //   // public static readonly patch_FactionResource[] FactionResources = ((patch_FactionResource[])Enum.GetValues(typeof(patch_FactionResource))).Except(new patch_FactionResource[1]).ToArray<patch_FactionResource>();
     //    //public static readonly patch_PriorityType[] PriorityTypes = (patch_PriorityType[])Enum.GetValues(typeof(patch_PriorityType));
 
-    //    public static readonly patch_TechCategory[] TechCategories = (patch_TechCategory[])Enum.GetValues(typeof(patch_TechCategory));
+    //    public static readonly TechCategory[] TechCategories2 = (TechCategory[])Enum.GetValues(typeof(TechCategory));
     //}
 
     public class patch_TISpaceBodyState : TISpaceBodyState
@@ -1262,5 +1264,126 @@ namespace PavonisInteractive.TerraInvicta
             return dictionary;
         }
     }
-}
+
+
+    public class ResearchPanelController : MonoBehaviour
+    {
+        private string TechCategoryTooltip(TIFactionState faction, TIGenericTechTemplate currentGenericTemplate)
+        {
+
+            if (currentGenericTemplate.techCategory == (TechCategory)patch_TechCategory.MagicScience)
+                {
+                float num = faction.SumCategoryModifiers(currentGenericTemplate.techCategory);
+                float num2 = faction.DistributedCategoryModifierValue(currentGenericTemplate.techCategory);
+                string text = Loc.T("UI.Science.Panel.PositiveBonus", new object[]
+                {
+                num2.ToPercent("P0")
+                });
+                StringBuilder stringBuilder = new StringBuilder(Loc.T("UI.Science.Panel.TechCategoryTooltip_Bonus", new object[]
+                {
+                text,
+                currentGenericTemplate.categoryString
+                })).AppendLine();
+                float num3 = 0;
+                float num4 = faction.FleetsModifier(TechCategory.LifeScience);
+                float num5 = faction.FleetsModifier(TechCategory.Xenology);
+                if (num5 > 0f)
+                {
+                    stringBuilder.AppendLine(Loc.T("UI.Science.Panel.Councilors", new object[]
+                    {
+                    num5.ToPercent("P0")
+                    }));
+                }
+                if (num4 > 0f)
+                {
+                    stringBuilder.AppendLine(Loc.T("UI.Science.Panel.Orgs", new object[]
+                    {
+                    num4.ToPercent("P0")
+                    }));
+                }
+                if (num3 > 0f)
+                {
+                    stringBuilder.AppendLine(Loc.T("UI.Science.Panel.Habs", new object[]
+                    {
+                    num3.ToPercent("P0")
+                    }));
+                }
+                stringBuilder.AppendLine(Loc.T("UI.Science.Panel.DiminishingReturns"));
+                if (num2 != num)
+                {
+                    stringBuilder.AppendLine().AppendLine(Loc.T("UI.Science.Panel.BonusDistribution", new object[]
+                    {
+                    num.ToPercent("P0"),
+                    num2.ToPercent("P0")
+                    }));
+                }
+                return stringBuilder.ToString();
+            }
+            else
+                {
+                float num = faction.SumCategoryModifiers(currentGenericTemplate.techCategory);
+            float num2 = faction.DistributedCategoryModifierValue(currentGenericTemplate.techCategory);
+            string text = Loc.T("UI.Science.Panel.PositiveBonus", new object[]
+            {
+                num2.ToPercent("P0")
+            });
+            StringBuilder stringBuilder = new StringBuilder(Loc.T("UI.Science.Panel.TechCategoryTooltip_Bonus", new object[]
+            {
+                text,
+                currentGenericTemplate.categoryString
+            })).AppendLine();
+            float num3 = faction.HabsMultiplier(currentGenericTemplate.techCategory);
+            float num4 = faction.OrgsMultiplier(currentGenericTemplate.techCategory);
+            float num5 = faction.TraitsMultiplier(currentGenericTemplate.techCategory);
+            float num6 = faction.FleetsModifier(currentGenericTemplate.techCategory);
+            float num7 = faction.InvestigationsModifier(currentGenericTemplate.techCategory);
+            if (num5 > 0f)
+            {
+                stringBuilder.AppendLine(Loc.T("UI.Science.Panel.Councilors", new object[]
+                {
+                    num5.ToPercent("P0")
+                }));
+            }
+            if (num4 > 0f)
+            {
+                stringBuilder.AppendLine(Loc.T("UI.Science.Panel.Orgs", new object[]
+                {
+                    num4.ToPercent("P0")
+                }));
+            }
+            if (num3 > 0f)
+            {
+                stringBuilder.AppendLine(Loc.T("UI.Science.Panel.Habs", new object[]
+                {
+                    num3.ToPercent("P0")
+                }));
+            }
+            if (num6 > 0f)
+            {
+                stringBuilder.AppendLine(Loc.T("UI.Science.Panel.Fleets", new object[]
+                {
+                    num6.ToPercent("P0")
+                }));
+            }
+            if (num7 > 0f)
+            {
+                stringBuilder.AppendLine(Loc.T("UI.Science.Panel.Investigations", new object[]
+                {
+                    num7.ToPercent("P0")
+                }));
+            }
+            stringBuilder.AppendLine(Loc.T("UI.Science.Panel.DiminishingReturns"));
+            if (num2 != num)
+            {
+                stringBuilder.AppendLine().AppendLine(Loc.T("UI.Science.Panel.BonusDistribution", new object[]
+                {
+                    num.ToPercent("P0"),
+                    num2.ToPercent("P0")
+                }));
+            }
+            return stringBuilder.ToString();
+        }
+        }
+    }
+  }
     

@@ -527,7 +527,12 @@ public class TIMissionEffect_BuildTeleporter: TIMissionEffect
     {
         patch_TIRegionState ref_region = (patch_TIRegionState)target.ref_region;
         ref_region.TeleportRegion = true;
-        return string.Empty;
+
+        GameControl.eventManager.TriggerEvent(new MajorRegionStatusChange(ref_region), null, new object[]
+            {
+                        ref_region
+            });
+     return string.Empty;
     }
    }
 

@@ -239,14 +239,14 @@ namespace PavonisInteractive.TerraInvicta
             bool panamaAccess = movingNation == null || TIRegionState.PanamaAccess(movingNation);
             suezAccess = false;
             panamaAccess = false;
-            Log.Debug($"A {region1}");
-            Log.Debug($"A {region2}");
+            //Log.Debug($"A {region1}");
+            //Log.Debug($"A {region2}");
             //bool flag = false;
             //bool flag2 = false;
-            CoastRegion region3 = CoastRegion.none;
-            CoastRegion region4 = CoastRegion.none;
-            CoastRegion region5 = CoastRegion.none;
-            CoastRegion region6 = CoastRegion.none;
+            //CoastRegion region3 = CoastRegion.none;
+            //CoastRegion region4 = CoastRegion.none;
+            //CoastRegion region5 = CoastRegion.none;
+            //CoastRegion region6 = CoastRegion.none;
             //switch (region1.mapRegionTemplate.coast)
             //{
             //    case CoastRegion.IndianMed:
