@@ -64,7 +64,7 @@ namespace PavonisInteractive.TerraInvicta
             TIFactionState[] array = GameStateManager.AllFactions();
             for (int i = 0; i < array.Length; i++)
             {
-                foreach (TICouncilorState ticouncilorState2 in from x in array[i].councilors
+                foreach (patch_TICouncilorState ticouncilorState2 in from x in array[i].councilors
                                                                orderby x.SumMissionRelevantAttributes() descending
                                                                select x)
                 {
@@ -88,21 +88,11 @@ namespace PavonisInteractive.TerraInvicta
 
                     if (completedMission != null && completedMission.missionTemplate.dataName == "Advise_Statesman")
                     {
-                        double Attribute = ticouncilorState2.GetAttribute(CouncilorAttribute.Administration, false, true, false, false);
-                        //Log.Debug($"Initial Attribute {Attribute}");
-                        Attribute = Attribute * 0.333;
-                        //Log.Debug($"The Deductions {Attribute}");
-                        Attribute = Math.Round(Attribute);
-                        //Log.Debug($"The rounded {Attribute}");
-                        ticouncilorState2.ModifyAttribute(CouncilorAttribute.Administration, (int)-Attribute);
-                        //Log.Debug($"Final Attribute {ticouncilorState2.GetAttribute(CouncilorAttribute.Administration)}");
+                        ticouncilorState2.ModifyAttribute(CouncilorAttribute.Administration, -ticouncilorState2.Adminholder);
                     }
                     if (completedMission != null && completedMission.missionTemplate.dataName == "Advise_Scientist")
                     {
-                        double Attribute = ticouncilorState2.GetAttribute(CouncilorAttribute.Science, false, true, false, false);
-                        Attribute = Attribute * 0.333;
-                        Attribute = Math.Round(Attribute);
-                        ticouncilorState2.ModifyAttribute(CouncilorAttribute.Science, -(int)Attribute);
+                        ticouncilorState2.ModifyAttribute(CouncilorAttribute.Science, -ticouncilorState2.ScienceHolder);
                     }
 
                     if (completedMission != null && completedMission.missionTemplate.dataName == "LivingComputing")
@@ -112,14 +102,9 @@ namespace PavonisInteractive.TerraInvicta
 
                     if (completedMission != null && completedMission.missionTemplate.dataName == "Advise_Super")
                     {
-                        double Attribute2 = ticouncilorState2.GetAttribute(CouncilorAttribute.Administration, false, true, false, false);
-                        Attribute2 = Attribute2 * 0.333;
-                        Attribute2 = Math.Round(Attribute2);
-                        ticouncilorState2.ModifyAttribute(CouncilorAttribute.Administration, -(int)Attribute2);
-                        double Attribute = ticouncilorState2.GetAttribute(CouncilorAttribute.Science, false, true, false, false);
-                        Attribute = Attribute * 0.333;
-                        Attribute = Math.Round(Attribute);
-                        ticouncilorState2.ModifyAttribute(CouncilorAttribute.Science, -(int)Attribute);
+
+                        ticouncilorState2.ModifyAttribute(CouncilorAttribute.Administration, -ticouncilorState2.Adminholder);
+                        ticouncilorState2.ModifyAttribute(CouncilorAttribute.Science, -ticouncilorState2.ScienceHolder);
                     }
 
                     if (completedMission != null && completedMission.missionTemplate.persistentEffect)

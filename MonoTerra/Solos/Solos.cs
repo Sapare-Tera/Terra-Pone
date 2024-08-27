@@ -16,6 +16,7 @@ using static PavonisInteractive.TerraInvicta.Audio.SoundEvents;
 using PavonisInteractive.TerraInvicta.Entities;
 using UnityEngine.UI;
 using PavonisInteractive.TerraInvicta.Systems.GameTime;
+using TMPro;
 
 public abstract class patch_TIOperationTemplate : TIOperationTemplate, IOperation
 {
@@ -609,8 +610,8 @@ public class patch_TIHabModuleTemplate : TIHabModuleTemplate
         private void Initialize()
         {
             orig_Initialize();
-
-            AssetBundleManager.Initialize();
+       //this.BuildCreditsStringsMOD();
+        AssetBundleManager.Initialize();
             var GO2 = GameObject.Find("EarthObject");
             var GO3 = GO2.GetComponent<StagitMaterialChanger>();
             var GO4 = GO3.GetComponent<Renderer>();
@@ -627,38 +628,101 @@ public class patch_TIHabModuleTemplate : TIHabModuleTemplate
         var GO6 = GO5.GetComponent<Image>();
         GO6.sprite = AssetBundleManager.LoadAsset<Sprite>("misc/MenuTitle");
     }
-    }
+   // public List<TMP_Text> TICreditsListmod = new List<TMP_Text>();
+   // public List<string> ModCreditsStrings = new List<string>();
+    //public void BuildCreditsStringsMOD()
+    //{
+    //    this.ModCreditsStrings.Clear();
+    //    StringBuilder stringBuilder = new StringBuilder();
+    //    int num = 0;
+    //    for (int i = 0; i < TemplateManager.global.creditsEntries; i++)
+    //    {
+    //        string key = new StringBuilder("UI.StartScreen.ModCredits_").Append(i.ToString()).ToString();
+    //        stringBuilder.Append(Loc.T(key));
+    //        num++;
+    //        if (num > 300)
+    //        {
+    //            this.ModCreditsStrings.Add(stringBuilder.ToString());
+    //            stringBuilder.Clear();
+    //            num = 0;
+    //        }
+    //    }
+    //    this.ModCreditsStrings.Add(stringBuilder.ToString());
+    //    for (int j = 0; j < this.ModCreditsStrings.Count; j++)
+    //    {
+    //        if (j > 0 && this.TICreditsListmod.Count - 1 < j)
+    //        {
+    //            TMP_Text component = UnityEngine.Object.Instantiate<GameObject>(this.TICreditsListmod[0].gameObject, this.TICreditsListmod[0].transform.parent).GetComponent<TMP_Text>();
+    //            this.TICreditsListmod.Add(component);
+    //        }
+    //        this.TICreditsListmod[j].SetText(this.ModCreditsStrings[j]);
+    //    }
+    //    this.TICreditsListmod[0].transform.parent.gameObject.SetActive(true);
+    //}
 
-    public class TICouncilorCondition_iStatWithoutOrgsTotal : TICouncilorCondition
+    public void BuildCreditsStrings()
     {
-
-        public override List<string> descriptionParams
+        this.TICreditsStrings.Clear();
+        StringBuilder stringBuilder = new StringBuilder();
+        int num = 0;
+        for (int i = 0; i < TemplateManager.global.creditsEntries; i++)
         {
-            get
+            string key = new StringBuilder("UI.StartScreen.TICredits_").Append(i.ToString()).ToString();
+            stringBuilder.Append(Loc.T(key));
+            num++;
+            if (num > 300)
             {
-                return new List<string>(2)
-            {
-                TIUtilities.GetAttributeString(this.strIdx.ToEnum(CouncilorAttribute.None)),
-                base.GetNumericComparisonString(false)
-            };
+                this.TICreditsStrings.Add(stringBuilder.ToString());
+                stringBuilder.Clear();
+                num = 0;
             }
         }
-
-        public override bool PassesCondition(TIGameState state)
+        this.TICreditsStrings.Add(stringBuilder.ToString());
+        for (int j = 0; j < this.TICreditsStrings.Count; j++)
         {
-            TICouncilorState ref_councilor = state.ref_councilor;
-            CouncilorAttribute councilorAttribute = this.strIdx.ToEnum(CouncilorAttribute.None);
-            int attribute = ref_councilor.GetAttribute(CouncilorAttribute.Persuasion, false, false, true, false);
-            int attribute2 = ref_councilor.GetAttribute(CouncilorAttribute.Investigation, false, false, true, false);
-            int attribute3 = ref_councilor.GetAttribute(CouncilorAttribute.Espionage, false, false, true, false);
-            int attribute4 = ref_councilor.GetAttribute(CouncilorAttribute.Command, false, false, true, false);
-            int attribute5 = ref_councilor.GetAttribute(CouncilorAttribute.Administration, false, false, true, false);
-            int attribute6 = ref_councilor.GetAttribute(CouncilorAttribute.Science, false, false, true, false);
-            int attribute7 = ref_councilor.GetAttribute(CouncilorAttribute.Security, false, false, true, false);
-            int value = attribute7 + attribute6 + attribute5 + attribute4 + attribute3 + attribute2 + attribute;
-            return ref_councilor != null && councilorAttribute != CouncilorAttribute.None && TICondition.PassesComparison(this.sign, value, TIUtilities.GetIntValue(this.strValue));
+            if (j > 0 && this.TICreditsList.Count - 1 < j)
+            {
+                TMP_Text component = UnityEngine.Object.Instantiate<GameObject>(this.TICreditsList[0].gameObject, this.TICreditsList[0].transform.parent).GetComponent<TMP_Text>();
+                this.TICreditsList.Add(component);
+            }
+            this.TICreditsList[j].SetText(this.TICreditsStrings[j]);
         }
+        this.TICreditsList[0].transform.parent.gameObject.SetActive(true);
     }
+}
+
+
+//Idk why this is here
+    //public class TICouncilorCondition_iStatWithoutOrgsTotal : TICouncilorCondition
+    //{
+
+    //    public override List<string> descriptionParams
+    //    {
+    //        get
+    //        {
+    //            return new List<string>(2)
+    //        {
+    //            TIUtilities.GetAttributeString(this.strIdx.ToEnum(CouncilorAttribute.None)),
+    //            base.GetNumericComparisonString(false)
+    //        };
+    //        }
+    //    }
+
+    //    public override bool PassesCondition(TIGameState state)
+    //    {
+    //        TICouncilorState ref_councilor = state.ref_councilor;
+    //        CouncilorAttribute councilorAttribute = this.strIdx.ToEnum(CouncilorAttribute.None);
+    //        int attribute = ref_councilor.GetAttribute(CouncilorAttribute.Persuasion, false, false, true, false);
+    //        int attribute2 = ref_councilor.GetAttribute(CouncilorAttribute.Investigation, false, false, true, false);
+    //        int attribute3 = ref_councilor.GetAttribute(CouncilorAttribute.Espionage, false, false, true, false);
+    //        int attribute4 = ref_councilor.GetAttribute(CouncilorAttribute.Command, false, false, true, false);
+    //        int attribute5 = ref_councilor.GetAttribute(CouncilorAttribute.Administration, false, false, true, false);
+    //        int attribute6 = ref_councilor.GetAttribute(CouncilorAttribute.Science, false, false, true, false);
+    //        int attribute7 = ref_councilor.GetAttribute(CouncilorAttribute.Security, false, false, true, false);
+    //        int value = attribute7 + attribute6 + attribute5 + attribute4 + attribute3 + attribute2 + attribute;
+    //        return ref_councilor != null && councilorAttribute != CouncilorAttribute.None && TICondition.PassesComparison(this.sign, value, TIUtilities.GetIntValue(this.strValue));
+    //    }
+    //}
 
 public class patch_TITraitTemplate : TITraitTemplate
 {
@@ -770,3 +834,244 @@ public enum patch_DeploymentType : ushort
 {
     teleport = 3
 }
+
+
+
+
+
+
+//public class Patch_ResupplyOperation : ResupplyOperation
+//{
+
+//    public TIResourcesCost PlanResupply(TISpaceFleetState fleet, bool prospectiveOnly, out bool freeRefueling, Dictionary<TISpaceShipState, int> pendingRepairedMagazines = null)
+//    {
+//        TIResourcesCost tiresourcesCost = new TIResourcesCost();
+//        TIHabState ref_hab = fleet.ref_hab;
+//        TIFactionState tifactionState = ((ref_hab != null) ? ref_hab.faction : null) ?? null;
+//        float maxFractionCanSpend = (tifactionState == fleet.faction || tifactionState == null) ? 1f : (1f / (float)fleet.ref_hab.faction.habs.Count);
+//        List<TISpaceShipState> list = (from x in fleet.ships
+//                                       where x.NeedsRefuel()
+//                                       select x into y
+//                                       orderby y.currentDeltaV_kps
+//                                       select y).ToList<TISpaceShipState>();
+//        TIHabState ref_hab2 = fleet.ref_hab;
+//        if (ref_hab2 != null && ref_hab2.AllowsResupply(fleet.faction, false, false))
+//        {
+//            Dictionary<TISpaceShipState, float> dictionary = fleet.ships.ToDictionary((TISpaceShipState x) => x, (TISpaceShipState y) => y.PropellantShortage_tons);
+//            while (list.Count > 0)
+//            {
+//                List<TISpaceShipState> list2 = new List<TISpaceShipState>();
+//                foreach (TISpaceShipState tispaceShipState in list)
+//                {
+//                    float num = this.RefuelTankAtHabDuration(tispaceShipState, tispaceShipState.ref_hab);
+//                    TIResourcesCost tiresourcesCost2 = new TIResourcesCost();
+//                    float num2 = Mathf.Min(dictionary[tispaceShipState], 100f);
+//                    if (num2 > 0f)
+//                    {
+//                        TIResourcesCost tiresourcesCost3 = tispaceShipState.GetPreferredPropellantTankCost(fleet.ref_hab.faction, num2, false);
+//                        tiresourcesCost3.SetCompletionTime_Days(Mathf.Max(0.01f, num * num2 / 100f));
+//                        TIResourcesCost tiresourcesCost4 = new TIResourcesCost(tiresourcesCost);
+//                        tiresourcesCost4.SumCosts_NoDuration(tiresourcesCost3);
+//                        bool flag = false;
+//                        if (tiresourcesCost4.CanAfford(tifactionState, maxFractionCanSpend, null, float.PositiveInfinity))
+//                        {
+//                            flag = true;
+//                        }
+//                        else if (fleet.AllowUseBoostForRepairsResupply)
+//                        {
+//                            tiresourcesCost3 = TISpaceShipTemplate.MixedResourceConstructionCost(fleet.faction, fleet.ref_hab, tiresourcesCost3, fleet.faction.AvailableSpaceResourcesExcept(1f, tiresourcesCost), false);
+//                            tiresourcesCost3.SetCompletionTime_Days(Mathf.Max(0.01f, num * num2 / 100f));
+//                            TIResourcesCost tiresourcesCost5 = new TIResourcesCost(tiresourcesCost);
+//                            tiresourcesCost5.SumCosts_NoDuration(tiresourcesCost3);
+//                            if (tiresourcesCost5.CanAfford(tifactionState, maxFractionCanSpend, null, float.PositiveInfinity))
+//                            {
+//                                flag = true;
+//                            }
+//                        }
+//                        if (flag)
+//                        {
+//                            if (!prospectiveOnly)
+//                            {
+//                                tispaceShipState.plannedResupplyAndRepair.AddPropellantToReload(num2);
+//                            }
+//                            Dictionary<TISpaceShipState, float> dictionary2 = dictionary;
+//                            TISpaceShipState key = tispaceShipState;
+//                            dictionary2[key] -= num2;
+//                            tiresourcesCost2.SumCostsWithDuration(tiresourcesCost3);
+//                            tiresourcesCost.SumCostsWithDuration(tiresourcesCost3);
+//                        }
+//                        else
+//                        {
+//                            list2.Add(tispaceShipState);
+//                        }
+//                    }
+//                    else
+//                    {
+//                        list2.Add(tispaceShipState);
+//                    }
+//                    if (!prospectiveOnly)
+//                    {
+//                        tispaceShipState.plannedResupplyAndRepair.AddtoResupplyCost(tiresourcesCost2);
+//                    }
+//                }
+//                foreach (TISpaceShipState item in list2)
+//                {
+//                    list.Remove(item);
+//                }
+//            }
+//            if (fleet.ref_hab.faction == fleet.faction)
+//            {
+//                Dictionary<TISpaceShipState, Dictionary<ModuleDataEntry, int>> dictionary3 = fleet.ships.ToDictionary((TISpaceShipState sh) => sh, (TISpaceShipState weaps) => weaps.AllWeaponModuleData().ToDictionary((ModuleDataEntry mod) => mod, (ModuleDataEntry ammoNeeded) => 0));
+//                using (List<TISpaceShipState>.Enumerator enumerator = fleet.ships.GetEnumerator())
+//                {
+//                    while (enumerator.MoveNext())
+//                    {
+//                        TISpaceShipState tispaceShipState2 = enumerator.Current;
+//                        foreach (ModuleDataEntry moduleDataEntry in tispaceShipState2.AllWeaponModuleData())
+//                        {
+//                            if (pendingRepairedMagazines != null && pendingRepairedMagazines.ContainsKey(tispaceShipState2))
+//                            {
+//                                dictionary3[tispaceShipState2][moduleDataEntry] = ((moduleDataEntry.moduleTemplate.ref_projectileWeapon == null || !moduleDataEntry.moduleTemplate.ref_projectileWeapon.hasMagazine()) ? 0 : (moduleDataEntry.moduleTemplate.ref_projectileWeapon.FullAmmoCount_PendingRepairs(tispaceShipState2, pendingRepairedMagazines[tispaceShipState2]) - tispaceShipState2.ammo[moduleDataEntry]));
+//                            }
+//                            else
+//                            {
+//                                dictionary3[tispaceShipState2][moduleDataEntry] = ((moduleDataEntry.moduleTemplate.ref_projectileWeapon == null || !moduleDataEntry.moduleTemplate.ref_projectileWeapon.hasMagazine()) ? 0 : (moduleDataEntry.moduleTemplate.ref_projectileWeapon.FullAmmoCount_Current(tispaceShipState2) - tispaceShipState2.ammo[moduleDataEntry]));
+//                            }
+//                        }
+//                    }
+//                    goto IL_6E0;
+//                }
+//            IL_4FC:
+//                foreach (TISpaceShipState tispaceShipState3 in fleet.ships)
+//                {
+//                    TIResourcesCost tiresourcesCost6 = new TIResourcesCost();
+//                    float completionTime_Days = this.RearmWeaponAtHabDuration(tispaceShipState3, tispaceShipState3.ref_hab);
+//                    foreach (ModuleDataEntry moduleDataEntry2 in tispaceShipState3.AllWeaponModuleData())
+//                    {
+//                        if (dictionary3[tispaceShipState3][moduleDataEntry2] > 0)
+//                        {
+//                            int num3 = Mathf.Min(50, dictionary3[tispaceShipState3][moduleDataEntry2]);
+//                            TIResourcesCost tiresourcesCost7 = tispaceShipState3.CostToReloadPartialAmmo(moduleDataEntry2, num3, fleet.ref_hab, false);
+//                            tiresourcesCost7.SetCompletionTime_Days(completionTime_Days);
+//                            if (tiresourcesCost7 != null)
+//                            {
+//                                TIResourcesCost tiresourcesCost8 = new TIResourcesCost(tiresourcesCost);
+//                                tiresourcesCost8.SumCosts_NoDuration(tiresourcesCost7);
+//                                bool flag2 = false;
+//                                if (tiresourcesCost8.CanAfford(tifactionState, 1f, null, float.PositiveInfinity))
+//                                {
+//                                    flag2 = true;
+//                                }
+//                                else if (fleet.AllowUseBoostForRepairsResupply)
+//                                {
+//                                    tiresourcesCost7 = TISpaceShipTemplate.MixedResourceConstructionCost(tifactionState, tispaceShipState3.ref_hab, tiresourcesCost7, tifactionState.AvailableSpaceResourcesExcept(1f, tiresourcesCost), false);
+//                                    tiresourcesCost7.SetCompletionTime_Days(completionTime_Days);
+//                                    TIResourcesCost tiresourcesCost9 = new TIResourcesCost(tiresourcesCost);
+//                                    tiresourcesCost9.SumCosts_NoDuration(tiresourcesCost7);
+//                                    if (tiresourcesCost9.CanAfford(tifactionState, maxFractionCanSpend, null, float.PositiveInfinity))
+//                                    {
+//                                        flag2 = true;
+//                                    }
+//                                }
+//                                if (flag2)
+//                                {
+//                                    if (!prospectiveOnly)
+//                                    {
+//                                        tispaceShipState3.plannedResupplyAndRepair.AddAmmoOrder(moduleDataEntry2, num3);
+//                                    }
+//                                    tiresourcesCost.SumCostsWithDuration(tiresourcesCost7);
+//                                    tiresourcesCost6.SumCostsWithDuration(tiresourcesCost7);
+//                                    Dictionary<ModuleDataEntry, int> dictionary4 = dictionary3[tispaceShipState3];
+//                                    ModuleDataEntry key2 = moduleDataEntry2;
+//                                    dictionary4[key2] -= 50;
+//                                }
+//                                else
+//                                {
+//                                    dictionary3[tispaceShipState3][moduleDataEntry2] = 0;
+//                                }
+//                            }
+//                            else
+//                            {
+//                                dictionary3[tispaceShipState3][moduleDataEntry2] = 0;
+//                            }
+//                        }
+//                    }
+//                    if (!prospectiveOnly)
+//                    {
+//                        tispaceShipState3.plannedResupplyAndRepair.AddtoResupplyCost(tiresourcesCost6);
+//                    }
+//                }
+//            IL_6E0:
+//                if (dictionary3.Values.Any((Dictionary<ModuleDataEntry, int> x) => x.Values.Any((int unHandledAmmo) => unHandledAmmo > 0)))
+//                {
+//                    goto IL_4FC;
+//                }
+//            }
+//            float num4 = fleet.ref_hab.DaysUntilCanStartResupply();
+//            if (!prospectiveOnly)
+//            {
+//                TIDateTime tidateTime = TITimeState.Now();
+//                tidateTime.AddDays(num4);
+//                foreach (TISpaceShipState tispaceShipState4 in fleet.ships)
+//                {
+//                    tispaceShipState4.plannedResupplyAndRepair.SetStartDate(tidateTime);
+//                }
+//            }
+//            tiresourcesCost.AddToCompletionTime_Days(num4);
+//        }
+//        List<TISpaceShipState> list3 = (from x in list
+//                                        where x.CanRefuelFromJovianAtmosphere() || x.CanRefuelFromHabSite(fleet.ref_habSite)
+//                                        select x).ToList<TISpaceShipState>();
+//        freeRefueling = (list3.Count > 0);
+//        TIResourcesCost tiresourcesCost10 = new TIResourcesCost();
+//        if (freeRefueling)
+//        {
+//            Func<KeyValuePair<FactionResource, float>, float> <> 9__11;
+//            foreach (TISpaceShipState tispaceShipState5 in list3)
+//            {
+//                if (fleet.landed)
+//                {
+//                    IEnumerable<KeyValuePair<FactionResource, float>> en = tispaceShipState5.drive.GetPerTankPropellantMaterials(tispaceShipState5.faction).ToRVCollection(1f);
+//                    Func<KeyValuePair<FactionResource, float>, float> evaluate;
+//                    if ((evaluate = <> 9__11) == null)
+//                    {
+//                        evaluate = (<> 9__11 = ((KeyValuePair<FactionResource, float> x) => fleet.ref_habSite.GetDailyProduction(x.Key) / x.Value));
+//                    }
+//                    FactionResource key3 = en.MinBy(evaluate).Key;
+//                    float num5 = fleet.ref_habSite.GetDailyProduction(key3) / TemplateManager.global.spaceResourceToTons;
+//                    float num6 = tispaceShipState5.drive.GetPerTankPropellantMaterials(tispaceShipState5.faction).ToResourcesCost(tispaceShipState5.PropellantShortage_tons).GetSingleCostValue(key3) / num5;
+//                    if (num6 < 90f)
+//                    {
+//                        if (!prospectiveOnly)
+//                        {
+//                            tispaceShipState5.plannedResupplyAndRepair.AddPropellantToReload(tispaceShipState5.PropellantShortage_tons);
+//                            tispaceShipState5.plannedResupplyAndRepair.SetStartDate(TITimeState.Now());
+//                        }
+//                    }
+//                    else
+//                    {
+//                        if (!prospectiveOnly)
+//                        {
+//                            tispaceShipState5.plannedResupplyAndRepair.AddPropellantToReload(num5 * 90f);
+//                            tispaceShipState5.plannedResupplyAndRepair.SetStartDate(TITimeState.Now());
+//                        }
+//                        num6 = 90f;
+//                    }
+//                    tiresourcesCost10.SetCompletionTime_Days(Mathf.Max(tiresourcesCost10.completionTime_days, num6));
+//                }
+//                else
+//                {
+//                    tiresourcesCost10.SetCompletionTime_Days(Mathf.Max(tiresourcesCost10.completionTime_days, Mathf.Max(tispaceShipState5.PropellantShortage_tons / 1000f, 10f)));
+//                    if (!prospectiveOnly)
+//                    {
+//                        tispaceShipState5.plannedResupplyAndRepair.AddPropellantToReload(tispaceShipState5.PropellantShortage_tons);
+//                        tispaceShipState5.plannedResupplyAndRepair.SetStartDate(TITimeState.Now());
+//                    }
+//                }
+//                list.Remove(tispaceShipState5);
+//            }
+//            tiresourcesCost.SetCompletionTime_Days(Mathf.Max(tiresourcesCost.completionTime_days, tiresourcesCost10.completionTime_days));
+//        }
+//        return tiresourcesCost;
+//    }
+//}

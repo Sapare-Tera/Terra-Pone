@@ -25,6 +25,8 @@ using PavonisInteractive.TerraInvicta;
 using System.Diagnostics;
 using Mono.Cecil;
 using System.Reflection;
+using PavonisInteractive.TerraInvicta.Entities;
+using PavonisInteractive.TerraInvicta.TIVirtualFleetState;
 
 namespace PavonisInteractive.TerraInvicta
 {
@@ -393,11 +395,32 @@ namespace PavonisInteractive.TerraInvicta
         }
 
         public int Adminholder = 0;
-
+        public int ScienceHolder = 0;
+        private int maxCouncilorAttribute
+        {
+            get
+            {
+                return TemplateManager.global.maxCouncilorAttribute;
+            }
+        }
         public extern List<CouncilorAugmentationOption> orig_GetCandidateAugmentations();
+
+
+
         public List<CouncilorAugmentationOption> GetCandidateAugmentations()
         {
             List<CouncilorAugmentationOption> list = new List<CouncilorAugmentationOption>();
+
+           if(isAlien)
+           foreach (CouncilorAttribute councilorAttribute in Enums.CouncilorAttributes)
+			{
+				if (councilorAttribute != CouncilorAttribute.Loyalty && councilorAttribute != CouncilorAttribute.ApparentLoyalty && this.GetAttribute(councilorAttribute, false, true, true, false) < this.maxCouncilorAttribute)
+				{
+					list.Add(new CouncilorAugmentationOption(councilorAttribute, null, 1f, this.XPModifier));
+				}
+			}
+
+
             foreach (patch_TITraitTemplate titraitTemplate in TemplateManager.IterateByClass<TITraitTemplate>(false))
             {
                 if (!titraitTemplate.costsmagic() && titraitTemplate.CouncilorCanAdd(this) || titraitTemplate.CouncilorCanRemove(this))
@@ -705,7 +728,16 @@ namespace PavonisInteractive.TerraInvicta
             }
         }
     }
-
+    public class patch_TISpaceFleetState : TISpaceFleetState, IOperationCapableState, IMobileAsset, ITransferTarget
+    {
+        public bool AllowUseBoostForRepairsResupply
+        {
+            get
+            {
+                return false;
+            }
+        }
+    }
 
     public class patch_TIResourcesCost : TIResourcesCost
     {

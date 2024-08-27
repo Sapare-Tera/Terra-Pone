@@ -53,7 +53,7 @@ public class patch_TIGlobalConfig : TIGlobalConfig
 
         pathGeoscapeMagicResource1 = "c_mapicons/ICO_geoscape_Magical_resource";
 
-        pathTeleportRegion1 = "c_mapicons/ICO_geoscape_Magical_resource";
+        pathTeleportRegion1 = "c_mapicons/ICO_geoscape_Teleporter";
 
         TeleportRegionSpritePath = "<color=#9F2B68FF><sprite tint=1 name=\"education\"></color>";
 
@@ -176,7 +176,7 @@ namespace PavonisInteractive.TerraInvicta
             if (flag)
             {
                 this.regionStatusMarker.associatedState = base.region;
-                if (region_VLC.MagicResource)
+                if (region_VLC.MagicResource && !region_VLC.TeleportRegion)
                 {
                     this.regionStatusMarker.SetCentralIcon(patch_AssetCacheManager.GeoscapeMagicResource1);
                     base.container.InitializeGeoscapeModel(this.regionStatusMarker, "3dEarthmodels/geoscape_core_resources");
@@ -185,7 +185,7 @@ namespace PavonisInteractive.TerraInvicta
                 }
                 if (region_VLC.TeleportRegion)
                 {
-                    this.regionStatusMarker.SetCentralIcon(patch_AssetCacheManager.GeoscapeMagicResource1);
+                    this.regionStatusMarker.SetCentralIcon(patch_AssetCacheManager.GeoscapeTeleportRegion1);
                     base.container.InitializeGeoscapeModel(this.regionStatusMarker, "3dEarthmodels/geoscape_core_resources");
                     this.regionStatusMarker.SetTooltip(() => Loc.T("UI.Markers.RegionTeleporterRegion"));
                     return;

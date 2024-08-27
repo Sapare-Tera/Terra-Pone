@@ -279,12 +279,13 @@ public class TIMissionEffect_Advise_Scientist : TIMissionEffect
 {
     public override string ApplyEffect(TIMissionState mission, TIGameState target, TIMissionOutcome outcome = TIMissionOutcome.Success)
     {
-        TICouncilorState councilor = mission.councilor;
+        patch_TICouncilorState councilor = (patch_TICouncilorState)mission.councilor;
 
         double SCI = councilor.GetAttribute(CouncilorAttribute.Science, false, true, false,false); ; ;
         SCI = SCI * 0.5;
         SCI = Math.Round(SCI);
-        councilor.ModifyAttribute(CouncilorAttribute.Science, (int)SCI);
+        councilor.ScienceHolder = (int)SCI;
+        councilor.ModifyAttribute(CouncilorAttribute.Science, councilor.ScienceHolder);
         if (target.isNationState)
         {
             float adviserScienceBonus = target.ref_nation.adviserScienceBonus;
@@ -323,11 +324,13 @@ public class TIMissionEffect_Advise_Statesman : TIMissionEffect
     {
 
 
-        TICouncilorState councilor = mission.councilor;
+        patch_TICouncilorState councilor = (patch_TICouncilorState)mission.councilor;
         double Admin = councilor.GetAttribute(CouncilorAttribute.Administration, false, true, false, false);
         Admin  = Admin * 0.5;
+
         Admin = Math.Round(Admin);
-        councilor.ModifyAttribute(CouncilorAttribute.Administration, (int)Admin);
+        councilor.Adminholder = (int)Admin;
+        councilor.ModifyAttribute(CouncilorAttribute.Administration, councilor.Adminholder);
 
         if (target.isNationState)
         {
@@ -368,17 +371,19 @@ public class TIMissionEffect_Advise_Super : TIMissionEffect
 {
 	public override string ApplyEffect(TIMissionState mission, TIGameState target, TIMissionOutcome outcome = TIMissionOutcome.Success)
 	{
-		TICouncilorState councilor = mission.councilor;
+		patch_TICouncilorState councilor = (patch_TICouncilorState)mission.councilor;
 
         double Admin = councilor.GetAttribute(CouncilorAttribute.Administration, false, true, false, false);
         Admin = Admin * 0.5;
         Admin = Math.Round(Admin);
-        councilor.ModifyAttribute(CouncilorAttribute.Administration, (int)Admin);
+        councilor.Adminholder = (int)Admin;
+        councilor.ModifyAttribute(CouncilorAttribute.Administration, councilor.Adminholder);
 
         double SCI = councilor.GetAttribute(CouncilorAttribute.Science, false, true, false, false);
         SCI = SCI * 0.5;
         SCI = Math.Round(SCI);
-        councilor.ModifyAttribute(CouncilorAttribute.Science, (int)SCI);
+        councilor.ScienceHolder = (int)SCI;
+        councilor.ModifyAttribute(CouncilorAttribute.Science, councilor.ScienceHolder);
 
 
 
@@ -440,13 +445,13 @@ public class TIMissionEffect_TrainArmy : TIMissionEffect
         TINationState ref_nation = target.ref_nation;
         if (base.MissionSuccess(outcome))
         {
-            float strength = ((outcome == TIMissionOutcome.CriticalSuccess) ? 0.05f : 0.025f);
+            float strength = ((outcome == TIMissionOutcome.CriticalSuccess) ? 0.02f : 0.01f);
             ref_nation.AddToMilitaryTechLevel(strength);
             return strength.ToString();
         }
         if (outcome == TIMissionOutcome.CriticalFailure)
         {
-            float num = -0.05f;
+            float num = -0.01f;
             ref_nation.AddToMilitaryTechLevel(num);
             return (num).ToString();
         }
@@ -513,7 +518,7 @@ public class TIMissionCondition_IsMagic : TIMissionCondition
     public override string CanTarget(TICouncilorState councilor, TIGameState possibleTarget)
     {
         patch_TIRegionState ref_region = (patch_TIRegionState)possibleTarget.ref_region;
-        if (ref_region.MagicResource)
+        if (ref_region.MagicResource && !ref_region.TeleportRegion)
         {
             return "_Pass";
         }
@@ -559,15 +564,28 @@ public class TIMissionEffect_EstablishIntelAgency : TIMissionEffect
         TICouncilorState councilor = mission.councilor;
         TINationState ref_nation = target.ref_nation;
         TIFactionState ref_faction = ref_nation.executiveFaction;
+        StringBuilder stringBuilder = new StringBuilder();
+        TIFactionState faction = councilor.faction;
 
-        councilor.faction.SetIntelIfValueHigher(ref_faction, TemplateManager.global.intelToSeeCouncilorSecrets, null);
-        //ref_faction.PassIntel();
-        //if (ref_faction.GetIntel(this) >= TemplateManager.global.intelToSeeCouncilorSecrets)
-        //{
-        //    this.faction.knownSpies.Add(this);
-        //    TINotificationQueueState.LogSpyDiscovered(this);
-        //}
-
+        if (base.MissionSuccess(outcome))
+        {
+            faction.SetIntel(ref_faction, 2f, null);
+            foreach (TICouncilorState intelTarget in ref_faction.councilors)
+            {
+                faction.SetIntel(intelTarget, 2f, null);
+            }
+        }
+        else
+        {
+            if (outcome == TIMissionOutcome.CriticalFailure)
+            {
+                mission.councilor.DetainCouncilor(faction, 2f, 1f, true);
+                stringBuilder.AppendLine(Loc.T(new StringBuilder(base.GetType().Name).Append(".Special2").ToString(), new object[]
+                {
+                            faction.displayNameCapitalized
+                }));
+            }
+        }
         return string.Empty;
     }
 }
