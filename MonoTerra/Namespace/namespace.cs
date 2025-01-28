@@ -27,10 +27,48 @@ using Mono.Cecil;
 using System.Reflection;
 using PavonisInteractive.TerraInvicta.Entities;
 using PavonisInteractive.TerraInvicta.TIVirtualFleetState;
+using System.IO;
 
 namespace PavonisInteractive.TerraInvicta
 {
-    public class patch_GeneralControlsController : GeneralControlsController
+
+    public class patch_TIEffectsState : TIEffectsState
+    {
+        [MonoModOriginal] public static extern void orig_ProcessInstantEffect(TIFactionState sourceFaction, EffectTargetType effectTargetType, EffectSecondaryStateType secondaryStateType, InstantEffect instantEffect, float value, float randomizer, string strValue, TIGameState inputState = null, TIGameState secondaryinputState = null);
+
+        public static void ProcessInstantEffect(TIFactionState sourceFaction, EffectTargetType effectTargetType, EffectSecondaryStateType secondaryStateType, InstantEffect instantEffect, float value, float randomizer, string strValue, TIGameState inputState = null, TIGameState secondaryinputState = null)
+        {
+            orig_ProcessInstantEffect( sourceFaction,  effectTargetType,  secondaryStateType,  instantEffect,  value,  randomizer,  strValue,  inputState, secondaryinputState);
+            switch (instantEffect)
+            {
+                case (InstantEffect)patch_InstantEffect.GrantControlPoint:
+                    {
+                        if (!(sourceFaction != null))
+                        {
+                            return;
+                        }
+                        String[] args = new String[] { strValue };
+
+                        TINationState tinationState = GameStateManager.IterateByClass<TINationState>(false).FirstOrDefault((TINationState x) => x.templateName == args[0]);
+
+                        TIControlPoint ticontrolPoint2 = tinationState.ref_nation.GetControlPoint((int)value);
+                        if (ticontrolPoint2 == null && tinationState.ref_nation.NumNativeControlPoints > 1)
+                        {
+                            ticontrolPoint2 = tinationState.ref_nation.FirstNativeControlPoint();
+                        }
+                        if (ticontrolPoint2 != null)
+                        {
+                            tinationState.ref_nation.ChangeControlPointOwner(ticontrolPoint2.positionInNation, ControlPointChangeCause.Event, sourceFaction);
+                            return;
+                        }
+                        return;
+                    }
+               }
+        }
+    }
+
+
+        public class patch_GeneralControlsController : GeneralControlsController
     {
         private Dictionary<patch_FactionResource, int> proposedResourceSales;
 
@@ -386,7 +424,18 @@ namespace PavonisInteractive.TerraInvicta
 
     public class patch_TICouncilorState : TICouncilorState
     {
-        public CouncilorAugmentationOption Addmagic(patch_TITraitTemplate trait)
+
+        public bool SufficientCapacityForOrg(TIOrgState org)
+        {
+            return this.orgs.Count < (TemplateManager.global.councilorMaxOrgs + 5) && this.availableAdministration >= org.tier - org.administration && this.orgsWeight + org.tier <= this.maxCouncilorAttribute;
+        }
+
+        public int SpareCapacityForOrgs()
+        {
+            return Mathf.Min((TemplateManager.global.councilorMaxOrgs + 5)- this.orgs.Count, this.availableAdministration);
+        }
+
+            public CouncilorAugmentationOption Addmagic(patch_TITraitTemplate trait)
         {
             CouncilorAugmentationOption aug = new CouncilorAugmentationOption();
             patch_TICouncilorState councilor;
@@ -477,7 +526,7 @@ namespace PavonisInteractive.TerraInvicta
             });
             GameStateManager.AllExtantNations().ToList<TINationState>().ForEach(delegate (TINationState x)
             {
-                x.MonthlyTemperatureEconomicImpact(anomaly_C);
+                x.MonthlyTemperatureEconomicImpact(anomaly_C, this.earthAtmosphericCO2_ppm);///UPDATED
             });
         }
 
@@ -579,13 +628,13 @@ namespace PavonisInteractive.TerraInvicta
         //    this.AddCH4_ppm(scaling * num * (-0.0000f * (float)nation.oilRegions), GHGSources.SpoilsPriority);
         //    this.AddN2O_ppm(scaling * num * (-0.0000f * (float)nation.oilRegions), GHGSources.SpoilsPriority);
         //}
-        public void AddEnviornmentPriorityEnvEffect(TINationState nation)
-        {
-            this.AddCO2_ppm(nation.WelfareCO2Removed(), GHGSources.EnvironmentPriority);
-            this.AddCH4_ppm(nation.WelfareCH4Removed(), GHGSources.EnvironmentPriority);
-            this.AddN2O_ppm(nation.WelfareN2ORemoved(), GHGSources.EnvironmentPriority);
-        }
-
+        //public void AddEnviornmentPriorityEnvEffect(TINationState nation)
+        //{
+        //    this.AddCO2_ppm(nation.WelfareCO2Removed(), GHGSources.EnvironmentPriority);
+        //    this.AddCH4_ppm(nation.WelfareCH4Removed(), GHGSources.EnvironmentPriority);
+        //    this.AddN2O_ppm(nation.WelfareN2ORemoved(), GHGSources.EnvironmentPriority);
+        //}
+        //Need to update now that prios changed
     }
     //public static class patch_Enums
     //{
@@ -615,7 +664,7 @@ namespace PavonisInteractive.TerraInvicta
                     mat.SetTexture("_SpecGlossMap", AssetBundleManager.LoadAsset<Texture2D>($"earthspecbundle_d/{mat.GetTexture("_SpecGlossMap").name}"));
                 }
             }
-        }
+       }
     }
 
 
@@ -745,36 +794,51 @@ namespace PavonisInteractive.TerraInvicta
         public float completionTime_days { get; private set; }
 
 
-        public patch_TIResourcesCost GetBoostSubstitutedCost(TIFactionState faction, TIGameState location, bool ignoreTime = false)
-        {
+public patch_TIResourcesCost GetBoostSubstitutedCost(TIFactionState faction, TIGameState location, bool ignoreTime = false, List<ResourceValue> availableResources = null)
+		{
             patch_TIResourcesCost tiresourcesCost = new patch_TIResourcesCost();
-            foreach (ResourceValue resourceValue in this.resourceCosts)
-            {
-                FactionResource resource = resourceValue.resource;
-                float value = resourceValue.value;
-                float currentResourceAmount = faction.GetCurrentResourceAmount(resource);
-                if (currentResourceAmount >= value || patch_TIResourcesCost.irreplaceableSpaceResourcesNEW.Contains(resource))
-                {
-                    tiresourcesCost.AddCost(resource, value, true);
-                }
-                else
-                {
-                    tiresourcesCost.AddCost(resource, currentResourceAmount, true);
-                    float num = value - currentResourceAmount;
-                    float resourceAmount = (float)TISpaceObjectState.GenericTransferBoostFromEarthSurface(faction, location, num / TemplateManager.global.spaceResourceToTons);
-                    tiresourcesCost.AddCost(FactionResource.Boost, resourceAmount, true);
-                    float resourceAmount2 = num * TIGlobalValuesState.GlobalValues.GetPurchaseResourceMarketValue(resource);
-                    tiresourcesCost.AddCost(FactionResource.Money, resourceAmount2, true);
-                }
-            }
-            if (!ignoreTime)
-            {
-                float num2 = TISpaceObjectState.GenericTransferTimeFromEarthsSurface_d(faction, location);
-                num2 += TIEffectsState.SumEffectsModifiers(Context.GenericModuleTransferTime, faction, num2);
-                tiresourcesCost.completionTime_days = this.completionTime_days + num2;
-            }
-            return tiresourcesCost;
-        }
+			foreach (ResourceValue resourceValue in this.resourceCosts)
+			{
+				FactionResource resource = resourceValue.resource;
+				float value = resourceValue.value;
+				float num = 0f;
+				if (availableResources == null)
+				{
+					num = faction.GetCurrentResourceAmount(resource);
+				}
+				else
+				{
+					foreach (ResourceValue resourceValue2 in availableResources)
+					{
+						if (resourceValue2.resource == resource)
+						{
+							num = resourceValue2.value;
+							break;
+						}
+					}
+				}
+				if (num >= value || patch_TIResourcesCost.irreplaceableSpaceResourcesNEW.Contains(resource))
+				{
+					tiresourcesCost.AddCost(resource, value, true);
+				}
+				else
+				{
+					tiresourcesCost.AddCost(resource, num, true);
+					float num2 = value - num;
+					float resourceAmount = (float)TISpaceObjectState.GenericTransferBoostFromEarthSurface(faction, location, num2 / TemplateManager.global.spaceResourceToTons);
+					tiresourcesCost.AddCost(FactionResource.Boost, resourceAmount, true);
+					float resourceAmount2 = num2 * TIGlobalValuesState.GlobalValues.GetPurchaseResourceMarketValue(resource);
+					tiresourcesCost.AddCost(FactionResource.Money, resourceAmount2, true);
+				}
+			}
+			if (!ignoreTime)
+			{
+				float num3 = TISpaceObjectState.GenericTransferTimeFromEarthsSurface_d(faction, location);
+				num3 += TIEffectsState.SumEffectsModifiers(Context.GenericModuleTransferTime, faction, num3);
+				tiresourcesCost.completionTime_days = this.completionTime_days + num3;
+			}
+			return tiresourcesCost;
+		}
 
         public static readonly FactionResource[] spaceResourcesNEW = new FactionResource[]
         {
@@ -802,13 +866,13 @@ namespace PavonisInteractive.TerraInvicta
             (FactionResource)patch_FactionResource.Magic
         };
 
-        public static readonly FactionResource[] unTradeableResourcesNEW = new FactionResource[]
+        public static readonly HashSet<patch_FactionResource> unTradeableResources = new HashSet<patch_FactionResource>
         {
-            FactionResource.MissionControl,
-            FactionResource.Projects,
-            FactionResource.None,
-            FactionResource.Research,
-            (FactionResource)patch_FactionResource.Magic
+            (patch_FactionResource)FactionResource.MissionControl,
+            (patch_FactionResource)FactionResource.Projects,
+            (patch_FactionResource)FactionResource.None,
+            (patch_FactionResource)FactionResource.Research,
+            patch_FactionResource.Magic
         };
 
         //public static readonly FactionResource[] unTradeableResources = new FactionResource[]
@@ -820,10 +884,22 @@ namespace PavonisInteractive.TerraInvicta
         //    (FactionResource)patch_FactionResource.Magic
         //};
 
-        public static readonly patch_FactionResource[] unAccumulatableResources;
+        public static readonly HashSet<patch_FactionResource> unAccumulatableResources = new HashSet<patch_FactionResource>
+        {
+            (patch_FactionResource)FactionResource.MissionControl,
+            (patch_FactionResource)FactionResource.Projects,
+            (patch_FactionResource) FactionResource.None
+        };
 
+        public static readonly HashSet<patch_FactionResource> resourcesAllowedToGoNegative = new HashSet<patch_FactionResource>
+        {
+            (patch_FactionResource) FactionResource.Money
+        };
 
-        public static readonly patch_FactionResource[] resourcesAllowedToGoNegative;
+        public static bool DontAccumulateResource(patch_FactionResource resourceType)
+        {
+            return patch_TIResourcesCost.unAccumulatableResources.Contains(resourceType);
+        }
     }
 
     public static class patch_AIEvaluators

@@ -493,14 +493,15 @@ public class patch_TIHabModuleTemplate : TIHabModuleTemplate
     public TIResourcesCost CostFromEarth(TIFactionState faction, TIGameState destinationState, bool isUpgrade)
     {
         float irradiatedValue = TIUtilities.IrradiatedMultiplier(destinationState);
-        float num = isUpgrade ? this.upgradeDiscount : 1f;
+        float num = isUpgrade ? 0.6666667f : 1f;
+        float num2 = isUpgrade ? 0.6666667f : 1f;
         TIResourcesCost tiresourcesCost = new TIResourcesCost();
         TISpaceBodyState spaceBody = destinationState.ref_spaceBody;
-        float num2 = 1f;
+        float num3 = 1f;
         TIHabState tihabState = destinationState as TIHabState;
         if (tihabState != null)
         {
-            num2 = tihabState.GetModuleConstructionTimeModifier(false);
+            num3 = tihabState.GetModuleConstructionTimeModifier(false, null);
             if (tihabState.IsBase)
             {
                 spaceBody = tihabState.habSite.parentBody;
@@ -514,20 +515,20 @@ public class patch_TIHabModuleTemplate : TIHabModuleTemplate
                 spaceBody = tihabSiteState.parentBody;
             }
         }
-        tiresourcesCost.AddCost(FactionResource.Boost, this.BoostCostFromEarth(irradiatedValue, spaceBody, faction, destinationState, num, null), true);
-        tiresourcesCost.AddCost(FactionResource.Money, this.MoneyCost(irradiatedValue, spaceBody, faction, num, null), true);
-        TIResourcesCost tiresourcesCost2 = this.BuildMaterials(irradiatedValue, spaceBody, faction, num).ToResourcesCost(1f);
-        foreach (FactionResource factionResource in patch_TIResourcesCost.irreplaceableSpaceResourcesNEW)
+        tiresourcesCost.AddCost(FactionResource.Boost, this.BoostCostFromEarth(irradiatedValue, spaceBody, faction, destinationState, num2, null), true);
+        tiresourcesCost.AddCost(FactionResource.Money, this.MoneyCost(irradiatedValue, spaceBody, faction, num2, null), true);
+        TIResourcesCost tiresourcesCost2 = this.BuildMaterials(irradiatedValue, spaceBody, faction, num2).ToResourcesCost(1f);
+        foreach (FactionResource factionResource in TIResourcesCost.irreplaceableSpaceResources)
         {
             tiresourcesCost.AddCost(factionResource, tiresourcesCost2.GetSingleCostValue(factionResource), true);
         }
-        float num3 = TISpaceObjectState.GenericTransferTimeFromEarthsSurface_d(faction, destinationState);
-        float num4 = this.buildTime_Days * num * num2 + num3 + TIEffectsState.SumEffectsModifiers(Context.GenericModuleTransferTime, faction, num3);
+        float num4 = TISpaceObjectState.GenericTransferTimeFromEarthsSurface_d(faction, destinationState);
+        float num5 = this.buildTime_Days * num * num3 + num4 + TIEffectsState.SumEffectsModifiers(Context.GenericModuleTransferTime, faction, num4);
         if (tihabState != null && tihabState.coreModule.underConstruction && tihabState.tier <= this.tier)
         {
-            num4 = Mathf.Max(num4, -(float)TITimeState.Now().DifferenceInDays(new TIDateTime(tihabState.coreModule.completionDate)));
+            num5 = Mathf.Max(num5, -(float)TITimeState.Now().DifferenceInDays(new TIDateTime(tihabState.coreModule.completionDate)));
         }
-        tiresourcesCost.SetCompletionTime_Days(num4);
+        tiresourcesCost.SetCompletionTime_Days(num5);
         return tiresourcesCost;
     }
 
@@ -536,7 +537,8 @@ public class patch_TIHabModuleTemplate : TIHabModuleTemplate
     public TIResourcesCost CostFromSpace(TIFactionState faction, TIGameState destinationState, bool isUpgrade, bool substituteBoost, int maxDaysToSave = 0, bool dontRecalculateIncome = false)
     {
         float irradiatedValue = TIUtilities.IrradiatedMultiplier(destinationState);
-        float num = isUpgrade ? this.upgradeDiscount : 1f;
+        float num = isUpgrade ? 0.6666667f : 1f;
+        float multiplier = isUpgrade ? 0.6666667f : 1f;
         TISpaceBodyState ref_spaceBody = destinationState.ref_spaceBody;
         float num2 = 1f;
         bool canFoundLocally = faction.CanFoundHabFromHabAtLocation(destinationState, false, false);
@@ -544,28 +546,30 @@ public class patch_TIHabModuleTemplate : TIHabModuleTemplate
         TIHabState tihabState = null;
         bool ConstructionModule = (this.upgradesFromName == "ConstructionModule" || this.upgradesFromName == "Nanofactory") && isUpgrade;
 
-        if ((destinationState.isHabSiteState ||  destinationState.isOrbitState) && canFoundLocally)
+        if ((destinationState.isHabSiteState || destinationState.isOrbitState) && canFoundLocally)
         {
             pass = 1f;
         }
-
-       if (destinationState.isHabState)
+        if (destinationState.isHabSiteState)
+        {
+            ref_spaceBody = destinationState.ref_habSite.ref_spaceBody;
+        }
+        else if (destinationState.isHabState)
         {
             tihabState = destinationState.ref_hab;
-            num2 = tihabState.GetModuleConstructionTimeModifier(false);
+            num2 = tihabState.GetModuleConstructionTimeModifier(false, null);
             if (tihabState.IsBase)
             {
                 ref_spaceBody = tihabState.habSite.ref_spaceBody;
             }
         }
-
-        if ((canFoundLocally == true && (this.tier == 1 || this.dataName == "OrbitalCore" || this.dataName == "SettlementCore") || (num2 < 1  && this.tier == 1) || (num2 < 0.85 && this.tier == 2) ||  (num2 < 0.7 && this.tier == 3) || ConstructionModule) || pass == 1 || (this.dataName == "OrbitalCore" || this.dataName == "SettlementCore" && num2 < 1) || (this.dataName == "ColonyCore" || this.dataName == "RingCore" && num2 < 0.85))
+        if ((canFoundLocally == true && (this.tier == 1 || this.dataName == "OrbitalCore" || this.dataName == "SettlementCore") || (num2 < 1 && this.tier == 1) || (num2 < 0.85 && this.tier == 2) || (num2 < 0.7 && this.tier == 3) || ConstructionModule) || pass == 1 || (this.dataName == "OrbitalCore" || this.dataName == "SettlementCore" && num2 < 1) || (this.dataName == "ColonyCore" || this.dataName == "RingCore" && num2 < 0.85))
         {
-            TIResourcesCost tiresourcesCost = this.BuildMaterials(irradiatedValue, ref_spaceBody, faction, num).ToResourcesCost(1f);
+            TIResourcesCost tiresourcesCost = this.BuildMaterials(irradiatedValue, ref_spaceBody, faction, multiplier).ToResourcesCost(1f);
             float num3 = 0f;
             if (substituteBoost && !tiresourcesCost.CanAfford(faction, 1f, null, float.PositiveInfinity) && (faction.IsActiveHumanFaction || GameStateManager.AlienNation().extant))
             {
-                tiresourcesCost = tiresourcesCost.GetBoostSubstitutedCost(faction, destinationState);
+                tiresourcesCost = tiresourcesCost.GetBoostSubstitutedCost(faction, destinationState, false, null);
                 float num4 = TISpaceObjectState.GenericTransferTimeFromEarthsSurface_d(faction, destinationState);
                 num4 += TIEffectsState.SumEffectsModifiers(Context.GenericModuleTransferTime, faction, num4);
                 if (num4 > num3)
@@ -795,17 +799,19 @@ public class patch_TIMissionModifier_ResourceSpent : TIMissionModifier_ResourceS
         private FactionResource heldResource;
     }
 
-
+//public enum patch_PriorityType : ushort
+//{
+//        Magic = 21
+//}
 
     public enum patch_OrgType : ushort
     {
         Military = 42
     }
-
-//public enum patch_PriorityType : ushort
-//{
-//    ExploitMagic = 420,
-//}
+public enum patch_InstantEffect : ushort
+{
+    GrantControlPoint = 420,
+}
 
 public enum patch_TechCategory : ushort
 {
@@ -823,6 +829,11 @@ public enum patch_Context : ushort
 {
     ExploitMagicPriority = 420,
     MegaspellLevel = 421,
+    InfluenceIncomeModifier = 422,
+    OperationsIncomeModifier = 423,
+    MoneyIncomeModifier = 424,
+    ResearchIncomeModifier = 425,
+    MaxEquipedOrgs = 426,
 }
 
 public enum patch_WorldOceanType : ushort

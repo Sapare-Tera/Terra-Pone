@@ -17,6 +17,7 @@ using PavonisInteractive.TerraInvicta.Systems.GameTime;
 using PavonisInteractive.TerraInvicta.Tasks;
 using Unity.Entities;
 using static UnityEngine.GraphicsBuffer;
+using static PavonisInteractive.TerraInvicta.TINationState;
 
 public class TIMissionCondition_FederationMember : TIMissionCondition
 {
@@ -469,7 +470,7 @@ public class TIMissionEffectHarmonyPrinciple : TIMissionEffect
         if (base.MissionSuccess(outcome))
         {
             float num = 0.25f * ((outcome == TIMissionOutcome.CriticalSuccess) ? 2f : 1f);
-            ref_nation.AddToCohesion(num);
+            ref_nation.AddToCohesion(num, CohesionChangeReason.CohesionReason_UnityPriority);
             return string.Empty;
         }
         else
@@ -508,7 +509,7 @@ public class TIMissionWealthofMagic : TIMissionEffect
     {
         TINationState ref_nation = target.ref_nation;
         float strength = -0.1f;
-        ref_nation.AddToInequality(strength, TINationState.InequalityChangeReason.WelfarePriority);
+        ref_nation.AddToInequality(strength, TINationState.InequalityChangeReason.InqReason_WelfarePriority);
         return string.Empty;
     }
 }

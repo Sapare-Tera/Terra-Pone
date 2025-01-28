@@ -118,83 +118,83 @@ namespace PavonisInteractive.TerraInvicta
 
         public Dictionary<string, float> techNameContributionHistory { get; private set; }
 
-        public TradeOffer GetAIGiveOffer(patch_TIFactionState offerReciever, patch_TIFactionState offerSender, TradeOffer decidedWantOffer)
-		{
-			bool flag = !offerReciever.isActivePlayer && !offerSender.isActivePlayer;
-			TradeOffer tradeOffer = offerSender.InitializeTradingOptions(offerReciever, false);
-			offerSender.InitializeTradingOptions(offerReciever, true);
-			tradeOffer.habs.Clear();
-			tradeOffer.projects.Clear();
-			tradeOffer.resourceValues.Clear();
-			tradeOffer.habSectors.Clear();
-			tradeOffer.controlPoints.Clear();
-			float num2;
-			float num3;
-			float num = TIFactionState.NetTradeScore(decidedWantOffer, tradeOffer, out num2, out num3);
-			List<TIOrgState> list = new List<TIOrgState>();
-			float num4 = (float)UnityEngine.Random.Range(0, 100);
-			num4 += (float)tradeOffer.orgs.Count - offerSender.GetFactionHate(offerReciever);
-			if (tradeOffer.orgs.Count > 0 && num4 > 50f)
-			{
-				TIOrgState tiorgState = tradeOffer.orgs[0];
-				foreach (TIOrgState tiorgState2 in tradeOffer.orgs)
-				{
-					if (AIEvaluators.EvaluateOrgForTrade(tiorgState2, offerReciever, offerSender) < num && AIEvaluators.EvaluateOrgForTrade(tiorgState2, offerReciever, offerSender) < AIEvaluators.EvaluateOrgForTrade(tiorgState, offerReciever, offerSender))
-					{
-						tiorgState = tiorgState2;
-					}
-				}
-				if (AIEvaluators.EvaluateOrgForTrade(tiorgState, offerReciever, offerSender) > 0f || !flag)
-				{
-					list.Add(tiorgState);
-				}
-			}
-			int num5 = 0;
-			using (List<ResourceValue>.Enumerator enumerator2 = decidedWantOffer.resourceValues.GetEnumerator())
-			{
-				while (enumerator2.MoveNext())
-				{
-					if (enumerator2.Current.value > 0f)
-					{
-						num5++;
-					}
-				}
-			}
-			if (num5 > 0 && tradeOffer.orgs.Count > 0)
-			{
-				TIOrgState tiorgState3 = tradeOffer.orgs[0];
-				foreach (TIOrgState tiorgState4 in tradeOffer.orgs)
-				{
-					if (!list.Contains(tiorgState4) && AIEvaluators.EvaluateOrgForTrade(tiorgState4, offerReciever, offerSender) < num && AIEvaluators.EvaluateOrgForTrade(tiorgState4, offerReciever, offerSender) < AIEvaluators.EvaluateOrgForTrade(tiorgState3, offerReciever, offerSender))
-					{
-						tiorgState3 = tiorgState4;
-					}
-				}
-				if (!list.Contains(tiorgState3) && tiorgState3 != null)
-				{
-					list.Add(tiorgState3);
-				}
-			}
-			tradeOffer.orgs.Clear();
-			foreach (TIOrgState item in list)
-			{
-				tradeOffer.orgs.Add(item);
-			}
-			num = patch_TIFactionState.NetTradeScore(decidedWantOffer, tradeOffer, out num3, out num2);
-			foreach (patch_FactionResource resource in Enums.FactionResources.Except(patch_TIResourcesCost.unTradeableResourcesNEW))
-			{
-                if (offerSender.EvaluateTradeOffer(tradeOffer, false, tradeOffer) - num < 0f)
-				{
-                    Log.Debug($"Step F {resource}");
-                    float num6 = Mathf.Min(num / patch_AIEvaluators.FixedResourceValue(offerSender,resource, 1f, true), this.AI_MaxWillingToTradeAway((FactionResource)resource, offerSender));
-					if (num6 > 0f)
-					{
-						tradeOffer.resourceValues.Add(new ResourceValue((FactionResource)resource, num6));
-					}
-				}
-			}
-			return tradeOffer;
-		}
+  //      public TradeOffer GetAIGiveOffer(patch_TIFactionState offerReciever, patch_TIFactionState offerSender, TradeOffer decidedWantOffer)
+		//{
+		//	bool flag = !offerReciever.isActivePlayer && !offerSender.isActivePlayer;
+		//	TradeOffer tradeOffer = offerSender.InitializeTradingOptions(offerReciever, false);
+		//	offerSender.InitializeTradingOptions(offerReciever, true);
+		//	tradeOffer.habs.Clear();
+		//	tradeOffer.projects.Clear();
+		//	tradeOffer.resourceValues.Clear();
+		//	tradeOffer.habSectors.Clear();
+		//	tradeOffer.controlPoints.Clear();
+		//	float num2;
+		//	float num3;
+		//	float num = TIFactionState.NetTradeScore(decidedWantOffer, tradeOffer, out num2, out num3);
+		//	List<TIOrgState> list = new List<TIOrgState>();
+		//	float num4 = (float)UnityEngine.Random.Range(0, 100);
+		//	num4 += (float)tradeOffer.orgs.Count - offerSender.GetFactionHate(offerReciever);
+		//	if (tradeOffer.orgs.Count > 0 && num4 > 50f)
+		//	{
+		//		TIOrgState tiorgState = tradeOffer.orgs[0];
+		//		foreach (TIOrgState tiorgState2 in tradeOffer.orgs)
+		//		{
+		//			if (AIEvaluators.EvaluateOrgForTrade(tiorgState2, offerReciever, offerSender) < num && AIEvaluators.EvaluateOrgForTrade(tiorgState2, offerReciever, offerSender) < AIEvaluators.EvaluateOrgForTrade(tiorgState, offerReciever, offerSender))
+		//			{
+		//				tiorgState = tiorgState2;
+		//			}
+		//		}
+		//		if (AIEvaluators.EvaluateOrgForTrade(tiorgState, offerReciever, offerSender) > 0f || !flag)
+		//		{
+		//			list.Add(tiorgState);
+		//		}
+		//	}
+		//	int num5 = 0;
+		//	using (List<ResourceValue>.Enumerator enumerator2 = decidedWantOffer.resourceValues.GetEnumerator())
+		//	{
+		//		while (enumerator2.MoveNext())
+		//		{
+		//			if (enumerator2.Current.value > 0f)
+		//			{
+		//				num5++;
+		//			}
+		//		}
+		//	}
+		//	if (num5 > 0 && tradeOffer.orgs.Count > 0)
+		//	{
+		//		TIOrgState tiorgState3 = tradeOffer.orgs[0];
+		//		foreach (TIOrgState tiorgState4 in tradeOffer.orgs)
+		//		{
+		//			if (!list.Contains(tiorgState4) && AIEvaluators.EvaluateOrgForTrade(tiorgState4, offerReciever, offerSender) < num && AIEvaluators.EvaluateOrgForTrade(tiorgState4, offerReciever, offerSender) < AIEvaluators.EvaluateOrgForTrade(tiorgState3, offerReciever, offerSender))
+		//			{
+		//				tiorgState3 = tiorgState4;
+		//			}
+		//		}
+		//		if (!list.Contains(tiorgState3) && tiorgState3 != null)
+		//		{
+		//			list.Add(tiorgState3);
+		//		}
+		//	}
+		//	tradeOffer.orgs.Clear();
+		//	foreach (TIOrgState item in list)
+		//	{
+		//		tradeOffer.orgs.Add(item);
+		//	}
+		//	num = patch_TIFactionState.NetTradeScore(decidedWantOffer, tradeOffer, out num3, out num2);
+		//	foreach (patch_FactionResource resource in Enums.FactionResources.Except(patch_TIResourcesCost.unTradeableResourcesNEW))
+		//	{
+  //              if (offerSender.AI_EvaluateTradeOffer(tradeOffer, false, tradeOffer) - num < 0f)
+		//		{
+  //                  Log.Debug($"Step F {resource}");
+  //                  float num6 = Mathf.Min(num / patch_AIEvaluators.FixedResourceValue(offerSender,resource, 1f, true), this.AI_MaxWillingToTradeAway((FactionResource)resource, offerSender));
+		//			if (num6 > 0f)
+		//			{
+		//				tradeOffer.resourceValues.Add(new ResourceValue((FactionResource)resource, num6));
+		//			}
+		//		}
+		//	}
+		//	return tradeOffer;
+		//}
 
 
 
@@ -226,6 +226,40 @@ namespace PavonisInteractive.TerraInvicta
         }
 
         private bool gameStateSubjectCreated;
+
+        private readonly TITraitTemplate declining = TemplateManager.Find<TITraitTemplate>("Declining", false);
+        private void AgeCouncilors()
+        {
+            if (this.IsActiveHumanFaction)
+            {
+                foreach (TICouncilorState ticouncilorState in this.councilors)
+                {
+                    float num = TIEffectsState.SumEffectsModifiers(Context.HumanLifespan, this, 65f);
+                    float num2 = 65f + num + (float)((ticouncilorState.gender == CouncilorGender.Female) ? 6 : 0);
+                    float num3 = (float)ticouncilorState.age - num2;
+                    if ((float)ticouncilorState.age > num2)
+                    {
+                        float num4 = Mathf.Pow((float)ticouncilorState.age - num2, 1.2f);
+                        if (num <= 0f && UnityEngine.Random.value * 1200f < num4 && !ticouncilorState.traits.Contains(this.declining))
+                        {
+                            ticouncilorState.AddTrait(this.declining, true);
+                        }
+                        float num5 = 0.016f + 0.001f * num3 + 5.001E-06f * num3 * num3 * num3;
+                        if (UnityEngine.Random.value < num5 / 12f)
+                        {
+                            TINotificationQueueState.LogCouncilorPassesAway(ticouncilorState);
+                            ticouncilorState.KillCouncilor(false, null);
+                            if (this.isActivePlayer)
+                            {
+                                this.UnlockAchievement("councilorDeathNatural");
+                                break;
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
 
         [MonoModOriginal] public extern void orig_PostGameStateCreateInit_OnCreationOnly_1();
         public override void PostGameStateCreateInit_OnCreationOnly_1()
@@ -259,6 +293,21 @@ namespace PavonisInteractive.TerraInvicta
             {
                 case patch_FactionResource.Magic:
                     return 0f;
+
+                case (patch_FactionResource)FactionResource.Influence:
+
+                    float num = TIEffectsState.SumEffectsModifiers((Context)patch_Context.InfluenceIncomeModifier, this, 0f);
+                    return orig_GetYearlyIncome(resourceType) * num;
+                case (patch_FactionResource)FactionResource.Operations:
+                    float num2 = TIEffectsState.SumEffectsModifiers((Context)patch_Context.OperationsIncomeModifier, this, 0f);
+                    return orig_GetYearlyIncome(resourceType) * num2;
+             
+                case (patch_FactionResource)FactionResource.Money:
+                    float num3 = TIEffectsState.SumEffectsModifiers((Context)patch_Context.MoneyIncomeModifier, this, 0f);
+                    return orig_GetYearlyIncome(resourceType) * num3;
+                case (patch_FactionResource)FactionResource.Research:
+                    float num4 = TIEffectsState.SumEffectsModifiers((Context)patch_Context.ResearchIncomeModifier, this, 0f);
+                    return orig_GetYearlyIncome(resourceType) * num4;
 
                 default:
                     return orig_GetYearlyIncome(resourceType);
@@ -594,68 +643,68 @@ namespace PavonisInteractive.TerraInvicta
             return num;
         }
 
-        public static bool TradeableResource(FactionResource resourceType)
-        {
-            return !patch_TIResourcesCost.unTradeableResourcesNEW.Contains(resourceType);
-        }
-        public TradeOffer InitializeTradingOptions(TIFactionState otherFaction, bool empty = false)
-        {
-            TradeOffer tradeOffer = new TradeOffer
-            {
-                offeringFaction = this,
-                resourceValues = new List<ResourceValue>(),
-                orgs = new List<TIOrgState>(),
-                controlPoints = new List<TIControlPoint>(),
-                habSectors = new List<TISectorState>(),
-                habs = new List<TIHabState>(),
-                projects = new List<TIProjectTemplate>(),
-                intelData = new List<TIGameState>(),
-                treatyType = TradeOffer.TreatyType.None
-            };
-            foreach (FactionResource resource in Enums.FactionResources.Except(patch_TIResourcesCost.unTradeableResourcesNEW))
-            {
-                if (this.UnlockedResource(resource) && otherFaction.UnlockedResource(resource))
-                {
-                    tradeOffer.resourceValues.Add(new ResourceValue(resource, 0f));
-                }
-            }
-            if (empty)
-            {
-                return tradeOffer;
-            }
-            foreach (TIOrgState tiorgState in this.GetAllOrgs())
-            {
-                if (tiorgState.IsEligibleForFaction(otherFaction))
-                {
-                    TICouncilorState assignedCouncilor = tiorgState.assignedCouncilor;
-                    if (assignedCouncilor == null || assignedCouncilor.CanRemoveOrg(tiorgState))
-                    {
-                        tradeOffer.orgs.Add(tiorgState);
-                    }
-                }
-            }
-            if (!this.IsAlienFaction && !otherFaction.IsAlienFaction)
-            {
-                foreach (TIControlPoint item in this.controlPoints)
-                {
-                    tradeOffer.controlPoints.Add(item);
-                }
-                foreach (TISectorState tisectorState in this.habSectors)
-                {
-                    if (otherFaction.CanExplore(tisectorState.hab))
-                    {
-                        tradeOffer.habSectors.Add(tisectorState);
-                    }
-                }
-                foreach (TIProjectTemplate tiprojectTemplate in this.completedProjects)
-                {
-                    if (tiprojectTemplate.PrereqsSatisfied(TIGlobalResearchState.FinishedTechs(), this.completedProjects, otherFaction) && tiprojectTemplate.techCategory != TechCategory.Xenology && !otherFaction.availableProjects.Contains(tiprojectTemplate) && !otherFaction.completedProjects.Contains(tiprojectTemplate) && !tiprojectTemplate.repeatable)
-                    {
-                        tradeOffer.projects.Add(tiprojectTemplate);
-                    }
-                }
-            }
-            return tradeOffer;
-        }
+        //public static bool TradeableResource(FactionResource resourceType)
+        //{
+        //    return !patch_TIResourcesCost.unTradeableResources.Contains(resourceType);
+        //}
+        //public TradeOffer InitializeTradingOptions(TIFactionState otherFaction, bool empty = false)
+        //{
+        //    TradeOffer tradeOffer = new TradeOffer
+        //    {
+        //        offeringFaction = this,
+        //        resourceValues = new List<ResourceValue>(),
+        //        orgs = new List<TIOrgState>(),
+        //        controlPoints = new List<TIControlPoint>(),
+        //        habSectors = new List<TISectorState>(),
+        //        habs = new List<TIHabState>(),
+        //        projects = new List<TIProjectTemplate>(),
+        //        intelData = new List<TIGameState>(),
+        //        treatyType = TradeOffer.TreatyType.None
+        //    };
+        //    foreach (FactionResource resource in Enums.FactionResources.Except(patch_TIResourcesCost.unTradeableResourcesNEW))
+        //    {
+        //        if (this.UnlockedResource(resource) && otherFaction.UnlockedResource(resource))
+        //        {
+        //            tradeOffer.resourceValues.Add(new ResourceValue(resource, 0f));
+        //        }
+        //    }
+        //    if (empty)
+        //    {
+        //        return tradeOffer;
+        //    }
+        //    foreach (TIOrgState tiorgState in this.GetAllOrgs())
+        //    {
+        //        if (tiorgState.IsEligibleForFaction(otherFaction))
+        //        {
+        //            TICouncilorState assignedCouncilor = tiorgState.assignedCouncilor;
+        //            if (assignedCouncilor == null || assignedCouncilor.CanRemoveOrg(tiorgState))
+        //            {
+        //                tradeOffer.orgs.Add(tiorgState);
+        //            }
+        //        }
+        //    }
+        //    if (!this.IsAlienFaction && !otherFaction.IsAlienFaction)
+        //    {
+        //        foreach (TIControlPoint item in this.controlPoints)
+        //        {
+        //            tradeOffer.controlPoints.Add(item);
+        //        }
+        //        foreach (TISectorState tisectorState in this.habSectors)
+        //        {
+        //            if (otherFaction.CanExplore(tisectorState.hab))
+        //            {
+        //                tradeOffer.habSectors.Add(tisectorState);
+        //            }
+        //        }
+        //        foreach (TIProjectTemplate tiprojectTemplate in this.completedProjects)
+        //        {
+        //            if (tiprojectTemplate.PrereqsSatisfied(TIGlobalResearchState.FinishedTechs(), this.completedProjects, otherFaction) && tiprojectTemplate.techCategory != TechCategory.Xenology && !otherFaction.availableProjects.Contains(tiprojectTemplate) && !otherFaction.completedProjects.Contains(tiprojectTemplate) && !tiprojectTemplate.repeatable)
+        //            {
+        //                tradeOffer.projects.Add(tiprojectTemplate);
+        //            }
+        //        }
+        //    }
+        //    return tradeOffer;
+        //}
     }
 }

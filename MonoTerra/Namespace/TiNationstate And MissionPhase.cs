@@ -13,6 +13,7 @@ using Mono.Cecil;
 using PavonisInteractive.TerraInvicta.Actions;
 using PavonisInteractive.TerraInvicta.Entities;
 using UnityEngine.EventSystems;
+using MonoMod;
 
 namespace PavonisInteractive.TerraInvicta
 {
@@ -40,7 +41,8 @@ namespace PavonisInteractive.TerraInvicta
     {
         private void StartofTurnBookkeeping()
         {
-            foreach (TINationState tinationState in GameStateManager.AllExtantNations())
+
+                foreach (TINationState tinationState in GameStateManager.AllExtantNations())
             {
                 tinationState.UpdateControlPointStatus();
                 tinationState.UpdateNativeControlPointsCount();
@@ -54,6 +56,39 @@ namespace PavonisInteractive.TerraInvicta
             }
             foreach (TIFactionState tifactionState in GameStateManager.AllFactions())
             {
+
+                if (TIEffectsState.SumEffectsModifiers((Context)patch_Context.InfluenceIncomeModifier, tifactionState, 0f) == 0)
+                {
+                    if (tifactionState.ideology.dataName == "cooperate")
+                    {
+                        TIEffectsState.ProcessInstantEffect(tifactionState, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.TriggerNarrativeEvent_StrValue, 0f, 0f, "event_Cooperatestart", this, null);
+                    }
+                    if (tifactionState.ideology.dataName == "destroy")
+                    {
+                        TIEffectsState.ProcessInstantEffect(tifactionState, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.TriggerNarrativeEvent_StrValue, 0f, 0f, "event_Destroystart", this, null);
+                    }
+                    if (tifactionState.ideology.dataName == "resist")
+                    {
+                        TIEffectsState.ProcessInstantEffect(tifactionState, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.TriggerNarrativeEvent_StrValue, 0f, 0f, "event_Resiststart", this, null);
+                    }
+                    if (tifactionState.ideology.dataName == "exploit")
+                    {
+                        TIEffectsState.ProcessInstantEffect(tifactionState, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.TriggerNarrativeEvent_StrValue, 0f, 0f, "event_Exploitstart", this, null);
+                    }
+                    if (tifactionState.ideology.dataName == "submit")
+                    {
+                        TIEffectsState.ProcessInstantEffect(tifactionState, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.TriggerNarrativeEvent_StrValue, 0f, 0f, "event_SubmitStart", this, null);
+                    }
+                    if (tifactionState.ideology.dataName == "appease")
+                    {
+                        TIEffectsState.ProcessInstantEffect(tifactionState, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.TriggerNarrativeEvent_StrValue, 0f, 0f, "event_Appeasestart", this, null);
+                    }
+                    if (tifactionState.ideology.dataName == "escape")
+                    {
+                        TIEffectsState.ProcessInstantEffect(tifactionState, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.TriggerNarrativeEvent_StrValue, 0f, 0f, "event_Escapestart", this, null);
+                    }
+                }
+
                 tifactionState.ActivateCouncilorOrgs();
                 foreach (TICouncilorState ticouncilorState in tifactionState.councilors)
                 {
@@ -130,6 +165,14 @@ namespace PavonisInteractive.TerraInvicta
     }
     public class patch_TINationState : TINationState
     {
+
+        private float BestCurrentSustainabilityValue()
+        {
+            TIGlobalValuesState globalValues = TIGlobalValuesState.GlobalValues;
+            float num = (globalValues != null) ? globalValues.initialSustainabilityMin : 0f;
+            float num2 = TIEffectsState.SumEffectsModifiers(Context.Environment_BestSustainabilityValue, this, num);
+            return Mathf.Max(0f, num + num2);
+        }
         public static float MeanAnnualGDPDamage(float tempAnomaly_C, float inequality)
         {
             float num = 0f;
@@ -172,21 +215,67 @@ namespace PavonisInteractive.TerraInvicta
         //        }
         //    }
         //}
+        private float boostPerYear_dekatons
+        {
+            get
+            {
+                return this.regions.Sum((TIRegionState region) => region.boostPerYear_dekatons);
+            }
+        }
+
+        public void OnFoundMilitaryPriorityComplete()
+        {
+            //TIFactionState controlPointTypeOwner = this.GetControlPointTypeOwner(ControlPointType.Aristocracy);
+            //TIFactionState controlPointTypeOwner2 = this.GetControlPointTypeOwner(ControlPointType.ExtractiveSector);
+            float control = 0;
+
+            foreach (patch_TIControlPoint ticontrolPoint in this.controlPoints)
+            {
+                control += 1;
+            }
+            foreach (patch_TIControlPoint ticontrolPoint in this.controlPoints)
+            {
+                float num = 0f + (float)this.currentMagicRegions;
+                // Log.Debug($"control1 {control}");
+                if (ticontrolPoint.faction != null && !ticontrolPoint.benefitsDisabled)
+                {
+                    // Log.Debug($"Num1 {num}");
+                    // Log.Debug($"control2 {control}");
+                    num /= control;
+                    // Log.Debug($"Num2 {num}");
+                    ticontrolPoint.faction.AddToCurrentResource(num, patch_FactionResource.Magic, false);
+                    //ticontrolPoint.faction.thisWeeksCumulativeSpoils += num;
+                }
+            }
+            this.AddToSustainability(this.spoilsSustainabilityChange * this.currentMagicRegions);
+            float num2 = -0.0050f * this.currentMagicRegions;
+            TIGlobalValuesState.GlobalValues.AddCO2_ppm(num2, GHGSources.SpoilsPriority);
+            //TIGlobalValuesState.GlobalValues.AddMagicPriorityEnvEffect(this, this.priorityEffectPopScaling * this.sustainability);
+        }
 
         public bool ValidPriority(PriorityType priority)
         {
+            //float Magic = (float)(Context)patch_Context.ExploitMagicPriority;
+            float Magic = TIEffectsState.SumEffectsModifiers((Context)patch_Context.ExploitMagicPriority, this.executiveControlPoint.faction, 0f);
+
             switch (priority)
             {
+                //case (PriorityType)patch_PriorityType.Magic:
                 case PriorityType.Economy:
                 case PriorityType.Welfare:
                 case PriorityType.Knowledge:
                 case PriorityType.Unity:
                 case PriorityType.Spoils:
-                case PriorityType.SpaceDevelopment:      
                     return true;
-                case PriorityType.Military:
-                    return this.unrest > 0f || this.militaryTechLevel < this.maxMilitaryTechLevel;
-                case PriorityType.SpaceflightProgram:
+                case PriorityType.Environment:
+                    return this.sustainability <= 0f || this.sustainability > this.BestCurrentSustainabilityValue();
+                case PriorityType.Government:
+                    return this.democracy < 10f;
+                case PriorityType.Oppression:
+                    return this.military;
+                case PriorityType.Funding:
+                    return this.spaceFunding_year <= this.maxFunding_year;
+                case PriorityType.Civilian_InitiateSpaceflightProgram:
                     return !this.spaceFlightProgram;
                 case PriorityType.LaunchFacilities:
                     return this.spaceFlightProgram;
@@ -200,45 +289,60 @@ namespace PavonisInteractive.TerraInvicta
                         }
                     }
                     return this.regions.Any((TIRegionState x) => x.missionControl < x.maxMissionControl);
-                case PriorityType.BuildArmy:
+                case PriorityType.Military_FoundMilitary:
+                    return this.currentMagicRegions > 0 && Magic > 0; 
+                case PriorityType.Military:
+                    return this.military && this.militaryTechLevel < this.maxMilitaryTechLevel;
+                case PriorityType.Military_BuildArmy:
                     return this.canBuildArmy;
-                case PriorityType.UpgradeArmy:
+                case PriorityType.Military_BuildNavy:
                     return this.canBuildNavy;
-                case PriorityType.InitiateNuclearProgram:
-                    return  this.canBuildSpaceDefenses && !this.nuclearProgram && currentMagicRegions > 0;
-                case PriorityType.BuildNuclearWeapons:
-                    return  this.canBuildSpaceDefenses && this.nuclearProgram && currentMagicRegions > 0;
-                case PriorityType.BuildSpaceDefenses :
-                    return this.canBuildSpaceDefenses && currentMagicRegions > 0;
+                case PriorityType.Military_InitiateNuclearProgram:
+                    return this.military && !this.nuclearProgram && !this.policy_noNukes && this.currentMagicRegions > 0;
+                case PriorityType.Military_BuildNuclearWeapons:
+                    return this.nuclearProgram && !this.policy_noNukes && this.currentMagicRegions > 0;
+                case PriorityType.Military_BuildSpaceDefenses:
+                    return this.military && this.canBuildSpaceDefenses && !this.completeAntiSpaceDefenses;
+                case PriorityType.Military_BuildSTOSquadron:
+                    if (this.military && this.canBuildSTOSquadrons && this.boostPerYear_dekatons > 0f)
+                    {
+                        return this.regions.Any((TIRegionState x) => x.numSTOFighters < x.maxSTOFighters);
+                    }
+                    return false;
                 default:
                     return false;
             }
         }
+
         public bool nuclearProgram { get; private set; }
-        private void InitiateNuclearProgramComplete()
-        {
-            this.nuclearProgram = true;
-            TIGlobalValuesState.GlobalValues.TriggerNuclearDetonationEffect(false, null, null, null);
-            this.ChangeNumNuclearWeapons(1);
-            foreach (TIControlPoint ticontrolPoint in this.controlPoints)
-            {
-                int controlPointPriority = ticontrolPoint.GetControlPointPriority(PriorityType.InitiateNuclearProgram, true);
-                ticontrolPoint.SetControlPointPriority(PriorityType.InitiateNuclearProgram, 0, true, true);
-                ticontrolPoint.SetControlPointPriority(PriorityType.BuildNuclearWeapons, controlPointPriority, false, false);
-            }
-            TINotificationQueueState.LogNationGainsNukes(this);
-            if (this.executiveFaction != null && this.executiveFaction.isActivePlayer)
-            {
-                this.executiveFaction.UnlockAchievement("completeNukeProgram");
-            }
-            TIGlobalValuesState.GlobalValues.ModifyMarketValuesForNuclearWeaponsPriority();
-        }
+		private void OnInitiateNuclearProgramComplete()
+		{
+			this.nuclearProgram = true;
+			TIGlobalValuesState.GlobalValues.TriggerNuclearDetonationEffect(false, null, null, null);
+			this.ChangeNumNuclearWeapons(1);
+			//foreach (TIFactionState tifactionState in this.FactionsWithControlPoint)
+			//{
+			//	tifactionState.CommitAtrocity(1, TIFactionState.AtrocityCause.NuclearTesting);
+			//}
+			TINotificationQueueState.LogNationGainsNukes(this);
+			if (this.executiveFaction != null && this.executiveFaction.isActivePlayer)
+			{
+				this.executiveFaction.UnlockAchievement("completeNukeProgram");
+			}
+			TIGlobalValuesState.GlobalValues.ModifyMarketValuesForNuclearWeaponsPriority();
+			foreach (TIControlPoint ticontrolPoint in this.controlPoints)
+			{
+				int controlPointPriority = ticontrolPoint.GetControlPointPriority(PriorityType.Military_InitiateNuclearProgram, false);
+				ticontrolPoint.SetControlPointPriority(PriorityType.Military_InitiateNuclearProgram, 0, true, true);
+				ticontrolPoint.SetControlPointPriority(PriorityType.Military_BuildNuclearWeapons, controlPointPriority, false, false);
+			}
+		}
 
         public int currentMagicRegions //would be better if it used its own instead of oilresource
 		{
 			get
 			{
-				return this.regions.Count((TIRegionState region) => region.template.oilResource && !region.IsOccupied());
+				return this.regions.Count((TIRegionState region) => region.template.oilResource && !region.IsFullyOccupied());
 			}
 		}
         public void BuildAntiSpaceDefensesPriorityComplete()
@@ -305,8 +409,7 @@ namespace PavonisInteractive.TerraInvicta
         }
         public float get_spaceFundingPriorityIncomeChange()
         {
-            return TemplateManager.global.fundingPriorityBaseIncomeIncrease * (float)this.numControlPoints_unclamped + this.currentCoreEconomicRegions * 5;
+            return TemplateManager.global.fundingPriorityBaseIncomeIncrease * (float)this.numControlPoints_unclamped + this.numCoreEconomicRegions_dailyCache * 5;
         }
-
     }
 }

@@ -31,6 +31,8 @@ public class patch_TIGlobalConfig : TIGlobalConfig
     public string pathMagicIcon;
     public string MagicInlineSpritePath;
     public string DEF_IconPath;
+    public int councilorMaxOrgs;
+    public Boolean Test;
 
     public Color32[] techColor = new Color32[]
 {
@@ -43,6 +45,11 @@ public class patch_TIGlobalConfig : TIGlobalConfig
         new Color32(14, 14, 14, byte.MaxValue),
         new Color32(14, 14, 14, byte.MaxValue),
 };
+
+
+    public List<string> illus_loadingScreens = new List<string>
+    {
+    };
 
     [MonoModIgnore] public patch_TIGlobalConfig() : base() { }
     [MonoModOriginal] public extern void orig_TIGlobalConfig();
@@ -62,7 +69,7 @@ public class patch_TIGlobalConfig : TIGlobalConfig
         MagicScienceInlineSpritePath = "<color=#9F2B68FF><sprite tint=1 name=\"education\"></color>";
 
         MagicInlineSpritePath = "<color=#9F2B68FF><sprite tint=1 name=\"education\"></color>";
-
+        Test = true;
 
         pathMagicScienceIcon = "c_icons_2d/magic_tech_icon";
 
@@ -70,15 +77,14 @@ public class patch_TIGlobalConfig : TIGlobalConfig
         
         pathMagicIcon = "c_icons_2d/magic_tech_icon";
 
-        DEF_IconPath = "c_icons_2d/magic_tech_icon";
-
+        FMI_IconPath = "c_icons_2d/magic_tech_icon";
+        councilorMaxOrgs = 5;
 
     TIMissionModifier_ControlPointUnder_Multiplier = -0.333f;
         priority_MAG = 1f;
 
 
-
-        techColor = techColor.Concat(new UnityEngine.Color32[] { new UnityEngine.Color32(101, 101, 101, 255) }).ToArray();
+    techColor = techColor.Concat(new UnityEngine.Color32[] { new UnityEngine.Color32(101, 101, 101, 255) }).ToArray();
 
         illus_techCompletePath = new Dictionary<TechCategory, string>(9)
             {
@@ -397,7 +403,7 @@ namespace PavonisInteractive.TerraInvicta
             }
             if (this.resourceRegion)
             {
-                stringBuilder.Append(TemplateManager.global.coreResourceRegionInlineSpritePath);
+                stringBuilder.Append(TemplateManager.global.miningRegionInlineSpritePath);
             }
             if (this.MagicResource)
             {
@@ -459,7 +465,7 @@ namespace PavonisInteractive.TerraInvicta
                     region.annexationEndDate.ToCustomDateString()
                 }))).AppendLine();
             }
-            else if (region.IsOccupied())
+            else if (region.IsFullyOccupied())
             {
                 stringBuilder.AppendLine(TIUtilities.HighlightLine(Loc.T("UI.Nation.IsOccupied"))).AppendLine();
             }
@@ -488,7 +494,7 @@ namespace PavonisInteractive.TerraInvicta
             }
             if (region.resourceRegion)
             {
-                stringBuilder.Append(TemplateManager.global.coreResourceRegionInlineSpritePath).Append(Loc.T("UI.Nation.RegionResource")).AppendLine().AppendLine();
+                stringBuilder.Append(TemplateManager.global.miningRegionInlineSpritePath).Append(Loc.T("UI.Nation.RegionResource")).AppendLine().AppendLine();
             }
             if (region.colonyRegion)
             {
