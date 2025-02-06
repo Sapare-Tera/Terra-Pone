@@ -811,6 +811,7 @@ public class patch_TIMissionModifier_ResourceSpent : TIMissionModifier_ResourceS
 public enum patch_InstantEffect : ushort
 {
     GrantControlPoint = 420,
+    ActivateNAP = 421,
 }
 
 public enum patch_TechCategory : ushort
@@ -827,6 +828,7 @@ public enum patch_TechCategory : ushort
 }
 public enum patch_Context : ushort
 {
+    None = 0,
     ExploitMagicPriority = 420,
     MegaspellLevel = 421,
     InfluenceIncomeModifier = 422,

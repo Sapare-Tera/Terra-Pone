@@ -66,7 +66,159 @@ namespace PavonisInteractive.TerraInvicta
 
     public class patch_TIFactionState : TIFactionState
     {
+        public static int JealousyAndDeescalation(TIFactionState faction, TIFactionState enemyFaction, bool generalDeescalation, bool processPeriodicChange)
+        {
+            if (faction.permanentAlly(enemyFaction))
+            {
+                return 0;
+            }
 
+            int num = 0;
+            if (faction.mostPowerfulHumanEnemy != enemyFaction || generalDeescalation)
+            {
+                if (processPeriodicChange)
+                {
+                    faction.GainFactionHate(enemyFaction, -1f, false);
+                }
+                if (faction.mostPowerfulHumanEnemy != null && faction.mostPowerfulHumanEnemy == enemyFaction.mostPowerfulHumanEnemy)
+                {
+                    num--;
+                    if ((faction.proAlien && faction.mostPowerfulHumanEnemy.antiAlien) || (faction.antiAlien && faction.mostPowerfulHumanEnemy.proAlien))
+                    {
+                        num--;
+                    }
+                }
+            }
+
+            if (faction.HasNAP(enemyFaction))//if nap, reduce.
+            {
+                faction.GainFactionHate(enemyFaction, -1f, false);
+            }
+
+            float unitydrift = -5 + (TIGlobalValuesState.GlobalValues.earthAtmosphericN2O_ppm / 10);
+
+            faction.GainFactionHate(enemyFaction, unitydrift/5, false);//This Should drift hate based on unity.
+
+
+            if (faction.IsAlienFaction && enemyFaction.isAlienAppeaser && enemyFaction.unlockedVictoryObjective)
+            {
+                num -= 10;
+            }
+            else if (faction.isAlienAppeaser && enemyFaction.IsAlienFaction && faction.unlockedVictoryObjective)
+            {
+                num -= 9999;
+            }
+            if (enemyFaction.player.isAI || TINationState.GetIdeologicalDistance(faction.ideology, enemyFaction.ideology) >= TemplateManager.global.AI_GangUpOnLeaderBehavior_MinIdeologicalDistance_Difficulty())
+            {
+                if (faction.mostPowerfulHumanEnemy == enemyFaction)
+                {
+                    switch (faction.selfAssessement)
+                    {
+                        case FactionSelfAssessment.LosingBig:
+                            num += 3;
+                            break;
+                        case FactionSelfAssessment.Losing:
+                            num += 2;
+                            break;
+                        case FactionSelfAssessment.None:
+                            num++;
+                            break;
+                    }
+                    if ((faction.veryProAlien && enemyFaction.veryAntiAlien) || (faction.veryAntiAlien && enemyFaction.veryProAlien))
+                    {
+                        num += 2;
+                    }
+                    if ((faction.proAlien && enemyFaction.proAlien) || (faction.antiAlien && enemyFaction.antiAlien))
+                    {
+                        num -= ((TITimeState.CampaignDuration_years_Exact() < 5f) ? 3 : 1);
+                    }
+                    num = Mathf.Max(0, num);
+                }
+                if (!faction.permanentAlly(enemyFaction) && enemyFaction.unlockedVictoryObjective)
+                {
+                    num++;
+                }
+            }
+            return num;
+        }
+        public bool CanTradeNAP(TIFactionState otherFaction)//need to make it so more factions NAP, maybe get rid of jealousy mechanic all together
+        {
+            bool flag = this.HasNAP(otherFaction, true);
+            return !otherFaction.permanentAlly(this) && !otherFaction.AI_AtWarWithFaction(this) && !this.AI_AtWarWithFaction(otherFaction) && !flag && new FactionGoal_NonAggressionPact(this, 4, otherFaction).ValidNewGoal();
+        }
+        //&& this.mostPowerfulHumanEnemy != otherFaction && otherFaction.mostPowerfulHumanEnemy != this 
+        //AIDailyFactionPlanner.JealousyAndDeescalation(this, otherFaction, false, false) <= 0(THIS NEEDS TO BE PATCHED SO Triumpharat has no jealousy
+        public string DiplomacyGreetingMessage(TIFactionState otherFaction, bool forceWar)
+        {
+            string value = "War";
+            float num = this.GetFactionHate(otherFaction);
+            bool flag = this.WillingToTrade(otherFaction);
+            if (!forceWar)
+            {
+                if (flag && num < 0)
+                {
+                    value = "Cooperation";///Write alternatives for Nightmaremoon/Celerstia
+                }
+                if (flag && num < TemplateManager.global.factionHateConflictThreshold && num  >= 0)
+                {
+                    value = "Tolerance";
+                }
+                else if (flag && num >= TemplateManager.global.factionHateConflictThreshold && num <= TemplateManager.global.factionHateWarThreshold)
+                {
+                    value = "Conflict";
+                }
+                else if (!flag || num > TemplateManager.global.factionHateWarThreshold)
+                {
+                    value = "War";
+                }
+            }
+            string text = new StringBuilder(this.ideology.ideology.ToString()).Append(".").Append(otherFaction.ideology.ideology.ToString()).Append(".").Append(value).ToString();
+            string value2 = Loc.T("TIFactionTemplate.Diplomacy." + text.ToString());
+            return new StringBuilder(this.leaderNameWithAddress).Append(": ").Append("\"").Append(value2).Append("\"").ToString();
+        }
+        public string GetDiplomacyMood(TIFactionState otherFaction)
+        {
+            string result = "War";
+            float num = this.GetFactionHate(otherFaction);
+            bool flag = this.WillingToTrade(otherFaction);
+            if (flag && num < 0)
+            {
+                result = "Test";///Still missing this
+            }
+            if (flag && num < TemplateManager.global.factionHateConflictThreshold && num >= 0)
+            {
+                result = "Tolerance";
+            }
+            else if (flag && num >= TemplateManager.global.factionHateConflictThreshold && num <= TemplateManager.global.factionHateWarThreshold)
+            {
+                result = "Conflicted";
+            }
+            else if (!flag || num > TemplateManager.global.factionHateWarThreshold)
+            {
+                result = "War";
+            }
+            return result;
+        }
+
+        public float MCBasedAlienHate(TIFactionState enemyFaction)
+        {
+            if (this.IsAlienFaction && !enemyFaction.veryProAlien)
+            {
+                float num = (float)enemyFaction.missionControlUsage * TemplateManager.global.AI_AlienHatePerMCUtilitizedMultiplier();
+                return num + TIEffectsState.SumEffectsModifiers(Context.AlienHateFromMCUsage, enemyFaction, num);
+            }
+            if (this.isAlienAppeaser && !enemyFaction.IsAlienFaction)
+            {
+                float num = (float)enemyFaction.missionControlUsage * TemplateManager.global.AI_AlienHatePerMCUtilitizedMultiplier();
+                return num + TIEffectsState.SumEffectsModifiers(Context.AlienHateFromMCUsage, enemyFaction, num);
+            }
+            if (this.IsAlienProxy && !enemyFaction.IsAlienFaction)
+            {
+                float num = (float)enemyFaction.missionControlUsage * TemplateManager.global.AI_AlienHatePerMCUtilitizedMultiplier();
+                return num + TIEffectsState.SumEffectsModifiers(Context.AlienHateFromMCUsage, enemyFaction, num);
+            }
+            return -50;
+        }
 
         [fsIgnore]
         private Dictionary<TIObjectiveTemplate, ObjectiveStatus> objectives;
@@ -228,38 +380,38 @@ namespace PavonisInteractive.TerraInvicta
         private bool gameStateSubjectCreated;
 
         private readonly TITraitTemplate declining = TemplateManager.Find<TITraitTemplate>("Declining", false);
-        private void AgeCouncilors()
-        {
-            if (this.IsActiveHumanFaction)
-            {
-                foreach (TICouncilorState ticouncilorState in this.councilors)
-                {
-                    float num = TIEffectsState.SumEffectsModifiers(Context.HumanLifespan, this, 65f);
-                    float num2 = 65f + num + (float)((ticouncilorState.gender == CouncilorGender.Female) ? 6 : 0);
-                    float num3 = (float)ticouncilorState.age - num2;
-                    if ((float)ticouncilorState.age > num2)
-                    {
-                        float num4 = Mathf.Pow((float)ticouncilorState.age - num2, 1.2f);
-                        if (num <= 0f && UnityEngine.Random.value * 1200f < num4 && !ticouncilorState.traits.Contains(this.declining))
-                        {
-                            ticouncilorState.AddTrait(this.declining, true);
-                        }
-                        float num5 = 0.016f + 0.001f * num3 + 5.001E-06f * num3 * num3 * num3;
-                        if (UnityEngine.Random.value < num5 / 12f)
-                        {
-                            TINotificationQueueState.LogCouncilorPassesAway(ticouncilorState);
-                            ticouncilorState.KillCouncilor(false, null);
-                            if (this.isActivePlayer)
-                            {
-                                this.UnlockAchievement("councilorDeathNatural");
-                                break;
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-        }
+        //private void AgeCouncilors()
+        //{
+        //    if (this.IsActiveHumanFaction)
+        //    {
+        //        foreach (TICouncilorState ticouncilorState in this.councilors)
+        //        {
+        //            float num = TIEffectsState.SumEffectsModifiers(Context.HumanLifespan, this, 65f);
+        //            float num2 = 65f + num + (float)((ticouncilorState.gender == CouncilorGender.Female) ? 6 : 0);
+        //            float num3 = (float)ticouncilorState.age - num2;
+        //            if ((float)ticouncilorState.age > num2)
+        //            {
+        //                float num4 = Mathf.Pow((float)ticouncilorState.age - num2, 1.2f);
+        //                if (num <= 0f && UnityEngine.Random.value * 1200f < num4 && !ticouncilorState.traits.Contains(this.declining))
+        //                {
+        //                    ticouncilorState.AddTrait(this.declining, true);
+        //                }
+        //                float num5 = 0.016f + 0.001f * num3 + 5.001E-06f * num3 * num3 * num3;
+        //                if (UnityEngine.Random.value < num5 / 12f)
+        //                {
+        //                    TINotificationQueueState.LogCouncilorPassesAway(ticouncilorState);
+        //                    ticouncilorState.KillCouncilor(false, null);
+        //                    if (this.isActivePlayer)
+        //                    {
+        //                        this.UnlockAchievement("councilorDeathNatural");
+        //                        break;
+        //                    }
+        //                    break;
+        //                }
+        //            }
+        //        }
+        //    }
+        //}
 
         [MonoModOriginal] public extern void orig_PostGameStateCreateInit_OnCreationOnly_1();
         public override void PostGameStateCreateInit_OnCreationOnly_1()
@@ -298,6 +450,7 @@ namespace PavonisInteractive.TerraInvicta
 
                     float num = TIEffectsState.SumEffectsModifiers((Context)patch_Context.InfluenceIncomeModifier, this, 0f);
                     return orig_GetYearlyIncome(resourceType) * num;
+                
                 case (patch_FactionResource)FactionResource.Operations:
                     float num2 = TIEffectsState.SumEffectsModifiers((Context)patch_Context.OperationsIncomeModifier, this, 0f);
                     return orig_GetYearlyIncome(resourceType) * num2;
@@ -305,6 +458,7 @@ namespace PavonisInteractive.TerraInvicta
                 case (patch_FactionResource)FactionResource.Money:
                     float num3 = TIEffectsState.SumEffectsModifiers((Context)patch_Context.MoneyIncomeModifier, this, 0f);
                     return orig_GetYearlyIncome(resourceType) * num3;
+               
                 case (patch_FactionResource)FactionResource.Research:
                     float num4 = TIEffectsState.SumEffectsModifiers((Context)patch_Context.ResearchIncomeModifier, this, 0f);
                     return orig_GetYearlyIncome(resourceType) * num4;
@@ -519,7 +673,7 @@ namespace PavonisInteractive.TerraInvicta
             }
         }
 
-        public bool GenerateRecruitableCouncilors(bool campaignStart = false)
+        public bool GenerateRecruitableCouncilors(bool campaignStart = false) //is this used?
         {
             bool result = false;
             if (this.availableCouncilors.Count > 1 && !campaignStart && this.IsActiveHumanFaction)

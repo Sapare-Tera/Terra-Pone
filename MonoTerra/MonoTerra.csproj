@@ -31,17 +31,21 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Namespace\TiEffectstate in Namespace.cs" />
+    <Compile Include="Namespace\TiGlobalValueState in Namespaces.cs" />
+    <Compile Include="Solos\GovernmentPolicies.cs" />
     <Compile Include="Solos\Missions.cs" />
     <Compile Include="Namespace\Notifications in Namespace.cs" />
     <Compile Include="factiongoal_nations.cs" />
-    <Compile Include="Solos\MagicResource%28TIGlobalConfig%29.cs" />
+    <Compile Include="Solos\TiGlobalConfig.cs" />
     <Compile Include="MapRegionTemplate.cs" />
     <Compile Include="Solos\Solos.cs" />
     <Compile Include="Namespace\namespace.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Namespace\TIArmyState in Namespace.cs" />
-    <Compile Include="Namespace\TiFactionstate.cs" />
+    <Compile Include="Namespace\TiFactionstate in Namespaces.cs" />
     <Compile Include="Namespace\TiNationstate And MissionPhase.cs" />
+    <Compile Include="Namespace\TiRegionstate in Namespaces.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="0Harmony, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">

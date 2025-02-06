@@ -62,30 +62,74 @@ namespace PavonisInteractive.TerraInvicta
                     if (tifactionState.ideology.dataName == "cooperate")
                     {
                         TIEffectsState.ProcessInstantEffect(tifactionState, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.TriggerNarrativeEvent_StrValue, 0f, 0f, "event_Cooperatestart", this, null);
+                        foreach (TIFactionState enemyCouncil in GameStateManager.AllFactions())
+                        {
+                            if (enemyCouncil.ideology.dataName == "destroy" || (enemyCouncil.ideology.dataName == "resist"))
+                                {
+                                tifactionState.GainFactionHate(enemyCouncil, -100f, false);
+                                enemyCouncil.GainFactionHate(tifactionState, -100f, false);
+                            }
+                        }
                     }
                     if (tifactionState.ideology.dataName == "destroy")
                     {
                         TIEffectsState.ProcessInstantEffect(tifactionState, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.TriggerNarrativeEvent_StrValue, 0f, 0f, "event_Destroystart", this, null);
+                        foreach (TIFactionState enemyCouncil in GameStateManager.AllFactions())
+                        {
+                            if (enemyCouncil.ideology.dataName == "cooperate" || (enemyCouncil.ideology.dataName == "resist"))
+                            {
+                                tifactionState.GainFactionHate(enemyCouncil, -100f, false);
+                                enemyCouncil.GainFactionHate(tifactionState, -100f, false);
+                            }
+                        }
                     }
                     if (tifactionState.ideology.dataName == "resist")
                     {
                         TIEffectsState.ProcessInstantEffect(tifactionState, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.TriggerNarrativeEvent_StrValue, 0f, 0f, "event_Resiststart", this, null);
+                        foreach (TIFactionState enemyCouncil in GameStateManager.AllFactions())
+                        {
+                            if (enemyCouncil.ideology.dataName == "destroy" || (enemyCouncil.ideology.dataName == "cooperate"))
+                            {
+                                tifactionState.GainFactionHate(enemyCouncil, -100f, false);
+                                enemyCouncil.GainFactionHate(tifactionState, -100f, false);
+                            }
+                        }
                     }
                     if (tifactionState.ideology.dataName == "exploit")
                     {
                         TIEffectsState.ProcessInstantEffect(tifactionState, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.TriggerNarrativeEvent_StrValue, 0f, 0f, "event_Exploitstart", this, null);
+                        foreach (TIFactionState enemyCouncil in GameStateManager.AllFactions())
+                        {
+                            //tifactionState.GainFactionHate(enemyCouncil, -100f, false);
+                            //enemyCouncil.GainFactionHate(tifactionState, -100f, false);
+                        }
                     }
                     if (tifactionState.ideology.dataName == "submit")
                     {
                         TIEffectsState.ProcessInstantEffect(tifactionState, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.TriggerNarrativeEvent_StrValue, 0f, 0f, "event_SubmitStart", this, null);
+                        foreach (TIFactionState enemyCouncil in GameStateManager.AllFactions())
+                        {
+                            //tifactionState.GainFactionHate(enemyCouncil, -100f, false);
+                            //enemyCouncil.GainFactionHate(tifactionState, -100f, false);
+                        }
                     }
                     if (tifactionState.ideology.dataName == "appease")
                     {
                         TIEffectsState.ProcessInstantEffect(tifactionState, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.TriggerNarrativeEvent_StrValue, 0f, 0f, "event_Appeasestart", this, null);
+                        foreach (TIFactionState enemyCouncil in GameStateManager.AllFactions())
+                        {
+                            //tifactionState.GainFactionHate(enemyCouncil, -100f, false);
+                            //enemyCouncil.GainFactionHate(tifactionState, -100f, false);
+                        }
                     }
                     if (tifactionState.ideology.dataName == "escape")
                     {
                         TIEffectsState.ProcessInstantEffect(tifactionState, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.TriggerNarrativeEvent_StrValue, 0f, 0f, "event_Escapestart", this, null);
+                        foreach (TIFactionState enemyCouncil in GameStateManager.AllFactions())
+                        {
+                            //tifactionState.GainFactionHate(enemyCouncil, -100f, false);
+                            //enemyCouncil.GainFactionHate(tifactionState, -100f, false);
+                        }
                     }
                 }
 
@@ -163,16 +207,430 @@ namespace PavonisInteractive.TerraInvicta
             GameStateManager.NotificationQueue().CleanSummaryQueue(false);
         }
     }
+
+    public class patch_NationInfoController : NationInfoController
+    {
+        public static string BuildRegionDataTooltip(TIRegionState region, TIFactionState faction)
+        {
+            StringBuilder stringBuilder = new StringBuilder(region.displayName).AppendLine();
+            patch_TIRegionState region_VLC = region as patch_TIRegionState;
+            if (region.isBeingAnnexed)
+            {
+                stringBuilder.AppendLine(TIUtilities.HighlightLine(Loc.T("UI.Nation.IsBeingAnnexed", new object[]
+                {
+                    region.annexingArmy.homeNation.displayNameWithArticleCapitalized,
+                    region.annexationEndDate.ToCustomDateString()
+                }))).AppendLine();
+            }
+            else if (region.IsFullyOccupied())
+            {
+                stringBuilder.AppendLine(TIUtilities.HighlightLine(Loc.T("UI.Nation.IsOccupied"))).AppendLine();
+            }
+            else if (region.OccupationUnderwayButNotComplete())
+            {
+                stringBuilder.AppendLine(TIUtilities.HighlightLine(Loc.T("UI.Nation.IsBeingOccupied"))).AppendLine();
+            }
+            if (region.nation.capital == region)
+            {
+                stringBuilder.Append(TemplateManager.global.capitalRegionInlineSpritePath).Append(Loc.T("UI.Nation.RegionCapital", new object[]
+                {
+                    region.nation.displayNameWithArticle
+                })).AppendLine().AppendLine();
+            }
+            if (region.coreEconomicRegion)
+            {
+                stringBuilder.Append(TemplateManager.global.coreEconomicRegionInlineSpritePath).Append(Loc.T("UI.Nation.RegionCoreEco")).AppendLine().AppendLine();
+            }
+            if (region_VLC.MagicResource)
+            {
+                stringBuilder.Append(patch_TemplateManager.global_PVC.MagicResourceInlineSpritePath).Append(Loc.T("UI.Nation.RegionMagicResource")).AppendLine().AppendLine();
+            }
+            if (region_VLC.TeleportRegion)
+            {
+                stringBuilder.Append(patch_TemplateManager.global_PVC.TeleportRegionSpritePath).Append(Loc.T("UI.Nation.RegionTeleporter")).AppendLine().AppendLine();
+            }
+            if (region.resourceRegion)
+            {
+                stringBuilder.Append(TemplateManager.global.miningRegionInlineSpritePath).Append(Loc.T("UI.Nation.RegionResource")).AppendLine().AppendLine();
+            }
+            if (region.colonyRegion)
+            {
+                stringBuilder.Append(TemplateManager.global.colonyRegionInlineSpritePath).Append(Loc.T("UI.Nation.RegionColony")).AppendLine().AppendLine();
+            }
+            if (region.template.environment == EnvironmentType.Vulnerable)
+            {
+                stringBuilder.Append(TemplateManager.global.ecologicallyVulnerableRegionInlineSpritePath).Append(Loc.T("UI.Nation.RegionEcoVulnerable")).AppendLine().AppendLine();
+            }
+            else if (region.template.environment == EnvironmentType.Beneficiary)
+            {
+                stringBuilder.Append(TemplateManager.global.ecologicallySafeRegionInlineSpritePath).Append(Loc.T("UI.Nation.RegionEcoBeneficiary")).AppendLine().AppendLine();
+            }
+            if (region.terrain == TerrainType.Rugged)
+            {
+                stringBuilder.Append(TemplateManager.global.ruggedRegionInlineSpritePath).Append(Loc.T("UI.Nation.RegionRugged")).AppendLine().AppendLine();
+            }
+            if (region.nuclearDetonations > 0)
+            {
+                stringBuilder.Append(TemplateManager.global.nukedRegionInlineSpritePath).Append(Loc.T("UI.Nation.NukedRegion", new object[]
+                {
+                    region.nuclearDetonations.ToString()
+                })).AppendLine().AppendLine();
+            }
+            if (region.antiSpaceDefenses)
+            {
+                stringBuilder.Append(TemplateManager.global.antiSpaceDefensesInlineSpritePath).Append(Loc.T("UI.Nation.SpaceDefenses")).AppendLine().AppendLine();
+            }
+            if (faction.KnownAlienEntities.Any((TIRegionAlienEntityState x) => x.region == region))
+            {
+                stringBuilder.Append(TemplateManager.global.alienEntityInlineSpritePath).Append(Loc.T("UI.Nation.AlienEntityPresent")).AppendLine().AppendLine();
+            }
+            List<TIRegionState> list = region.AdjacentRegions(true);
+            List<TIRegionState> list2 = region.AdjacentRegions(false).Except(list).ToList<TIRegionState>();
+            List<TIBilateralTemplate> list3 = (from x in TemplateManager.IterateByClass<TIBilateralTemplate>(true)
+                                               where x.relationType == BilateralRelationType.PhysicalAdjacency && x.BilateralIsInScenario() && x.projectUnlock != null && (x.regionState1 == region || x.regionState2 == region) && !GameControl.control.activePlayer.completedProjects.Contains(x.projectUnlock)
+                                               select x).ToList<TIBilateralTemplate>();
+            if (list.Count > 0)
+            {
+                StringBuilder stringBuilder2 = stringBuilder;
+                string key = "UI.Nation.RegionAdjacencies";
+                object[] array = new object[2];
+                array[0] = region.displayName;
+                array[1] = TIUtilities.ConstructTextList(list.ConvertAll<TIGameState>((TIRegionState x) => x.ref_gameState), false, false);
+                stringBuilder2.AppendLine(Loc.T(key, array)).AppendLine();
+            }
+            if (list2.Count > 0)
+            {
+                StringBuilder stringBuilder3 = stringBuilder;
+                string key2 = "UI.Nation.RegionAdjacenciesFriendlyOnly";
+                object[] array2 = new object[2];
+                array2[0] = region.displayName;
+                array2[1] = TIUtilities.ConstructTextList(list2.ConvertAll<TIGameState>((TIRegionState x) => x.ref_gameState), false, false);
+                stringBuilder3.AppendLine(Loc.T(key2, array2)).AppendLine();
+            }
+            if (list3.Count > 0)
+            {
+                List<TIRegionState> list4 = list3.Select(delegate (TIBilateralTemplate x)
+                {
+                    if (!(x.regionState1 == region))
+                    {
+                        return x.regionState1;
+                    }
+                    return x.regionState2;
+                }).ToList<TIRegionState>();
+                StringBuilder stringBuilder4 = stringBuilder;
+                string key3 = "UI.Nation.RegionAdjanciesAddable";
+                object[] array3 = new object[1];
+                array3[0] = TIUtilities.ConstructTextList(list4.ConvertAll<TIGameState>((TIRegionState x) => x.ref_gameState), false, false);
+                stringBuilder4.AppendLine(Loc.T(key3, array3)).AppendLine();
+            }
+            return stringBuilder.ToString().TrimEnd(Array.Empty<char>());
+        }
+
+        private static string RestStateString(string stat, float currentValue, float restStateValue, float movementCap)
+        {
+            if (currentValue == restStateValue)
+            {
+                return Loc.T("UI.Nation.AtRestState", new object[]
+                {
+                    stat
+                });
+            }
+            float value = Mathf.Min(movementCap, Mathf.Abs(currentValue - restStateValue)) * ((restStateValue > currentValue) ? 1f : -1f);
+            return Loc.T("UI.Nation.MovingToRestState", new object[]
+            {
+                stat,
+                TIUtilities.ForceValueSign(value, false, false, ""),
+                TIUtilities.FormatSmallNumber(restStateValue, 7, 0, true, false)
+            });
+        }
+        private static string numberToColor(double delta, NationInfoController.WhatIsGood whatIsGood, float baseValue = 0f, float midValue = 5f)
+        {
+            switch (whatIsGood)
+            {
+                case NationInfoController.WhatIsGood.upIsGood:
+                    if (delta > 0.0)
+                    {
+                        return "<color=#85B260>";
+                    }
+                    if (delta < 0.0)
+                    {
+                        return "<color=#B26A60>";
+                    }
+                    break;
+                case NationInfoController.WhatIsGood.downIsGood:
+                    if (delta > 0.0)
+                    {
+                        return "<color=#B26A60>";
+                    }
+                    return "<color=#85B260>";
+                case NationInfoController.WhatIsGood.middleIsGood:
+                    if (delta > 0.0)
+                    {
+                        if (baseValue > midValue)
+                        {
+                            return "<color=#B26A60>";
+                        }
+                        if (baseValue < midValue)
+                        {
+                            return "<color=#85B260>";
+                        }
+                    }
+                    else if (delta < 0.0)
+                    {
+                        if (baseValue > midValue)
+                        {
+                            return "<color=#85B260>";
+                        }
+                        if (baseValue < midValue)
+                        {
+                            return "<color=#B26A60>";
+                        }
+                    }
+                    break;
+                case NationInfoController.WhatIsGood.upOrMiddleIsGood:
+                    if (delta > 0.0 || (baseValue >= midValue && delta < 0.0))
+                    {
+                        return "<color=#85B260>";
+                    }
+                    if (baseValue < midValue && delta < 0.0)
+                    {
+                        return "<color=#B26A60>";
+                    }
+                    break;
+            }
+            return "<color=#9BB9C7>";
+        }
+        public static string BuildCohesionTooltip(TINationState nation)
+        {
+            return new StringBuilder(TIGlobalConfig.globalConfig.cohesionInlineSpritePath).Append(Loc.T("UI.Nation.NationalStatTooltipHeader", new object[]
+            {
+                Loc.T("UI.Nation.Cohesion"),
+                nation.GetCohesionDescriptiveStringAndValue(3)
+            })).AppendLine().AppendLine(patch_NationInfoController.ChangeString(Loc.T("UI.Nation.Cohesion"), nation.cohesion - nation.historyCohesion[31], true, NationInfoController.WhatIsGood.upOrMiddleIsGood, false, false, nation.cohesion)).AppendLine(patch_NationInfoController.ChangeString(Loc.T("UI.Nation.CohesionRestState"), nation.cohesionRestState - nation.historyCohesionRestState[31], true, NationInfoController.WhatIsGood.upOrMiddleIsGood, false, false, nation.cohesionRestState)).AppendLine(patch_NationInfoController.RestStateString(Loc.T("UI.Nation.Cohesion"), nation.cohesion, nation.cohesionRestState, Mathf.Abs(nation.GetMonthlyCohesionMovement()))).AppendLine().AppendLine(TIGlobalConfig.globalConfig.verboseStatDescriptions ? Loc.T("UI.Nation.CohesionHelp1Short") : string.Empty).AppendLine().AppendLine(Loc.T("UI.Nation.CohesionHelp2", new object[]
+            {
+                TIUtilities.FormatSmallNumber(nation.unityPriorityCohesionChange, 7, 1, true, false),
+                patch_NationInfoController.requiredIPSummaryText(nation, PriorityType.Unity),
+                TIUtilities.FormatSmallNumber(nation.knowledgePriorityCohesionChange, 7, 1, true, false),
+                patch_NationInfoController.requiredIPSummaryText(nation, PriorityType.Knowledge)
+            })).AppendLine().AppendLine(nation.CohesionRestStateDetail).ToString();
+        }
+        private static string requiredIPSummaryText(TINationState nation, PriorityType priority)
+        {
+            return Loc.T("UI.Nation.RequiredInvestmentPoints", new object[]
+            {
+                TIUtilities.FormatSmallNumber(nation.GetRequiredInvestmentPointsForPriority(priority), 1, 0, true, false)
+            });
+        }
+
+        private static string ChangeString(string stat, float changeValue, bool useColor, NationInfoController.WhatIsGood whatIsGood, bool dollars = false, bool pop = false, float baseValue = 0f)
+        {
+            StringBuilder stringBuilder = new StringBuilder();
+            if (!useColor)
+            {
+                if (!dollars)
+                {
+                    stringBuilder = stringBuilder.Append(Loc.T("UI.Nation.RecentChange", new object[]
+                    {
+                        stat,
+                        TIUtilities.FormatBigOrSmallNumber(changeValue, 1, 7, 0, false, false)
+                    }));
+                }
+                else if (pop)
+                {
+                    stringBuilder = stringBuilder.Append(Loc.T("UI.Nation.RecentChangePop", new object[]
+                    {
+                        stat,
+                        TIUtilities.FormatBigOrSmallNumber(changeValue, 1, 7, 0, false, false)
+                    }));
+                }
+                else
+                {
+                    stringBuilder = stringBuilder.Append(Loc.T("UI.Nation.RecentChangeMoney", new object[]
+                    {
+                        stat,
+                        TIUtilities.FormatBigOrSmallNumber(changeValue, 1, 7, 1, false, false)
+                    }));
+                }
+            }
+            else if (pop)
+            {
+                stringBuilder = stringBuilder.AppendLine(Loc.T("UI.Nation.RecentChangePop", new object[]
+                {
+                    stat,
+                    TIUtilities.FormatBigOrSmallNumber(changeValue * 1000000f, 0, 0, 0, false, false)
+                }));
+            }
+            else
+            {
+                StringBuilder stringBuilder2 = new StringBuilder(patch_NationInfoController.numberToColor((double)changeValue, whatIsGood, baseValue, 5f)).Append(TIUtilities.ForceValueSign(changeValue, dollars, false, "")).Append("</color>");
+                if (dollars)
+                {
+                    stringBuilder = stringBuilder.Append(Loc.T("UI.Nation.RecentChangeMoney", new object[]
+                    {
+                        stat,
+                        stringBuilder2
+                    }));
+                }
+                else
+                {
+                    stringBuilder = stringBuilder.Append(Loc.T("UI.Nation.RecentChange", new object[]
+                    {
+                        stat,
+                        stringBuilder2
+                    }));
+                }
+            }
+            return stringBuilder.ToString();
+        }
+    }
+   
+    
+    
     public class patch_TINationState : TINationState
     {
+
+        public float ControlPointPriorityBonuses(TIControlPoint controlPoint, PriorityType priority)
+        {
+            TIFactionState faction = controlPoint.faction;
+            return ((faction != null) ? faction.cachedPriorityBonuses[priority] : 0f) + controlPoint.diversityBonus[priority] + this.NationalPriorityBonuses(priority) + this.HarmonyPriorityBonus(priority);
+        }
+        public float HarmonyPriorityBonus(PriorityType priority)
+        {
+            if (priority == PriorityType.Military_BuildArmy || priority == PriorityType.Military || priority == PriorityType.Military_BuildNavy)
+            {
+                return ((float)((-this.sustainability + 5) * 0.05));
+            }
+            if (priority == PriorityType.Oppression)
+            {
+                return ((float)((-TIGlobalValuesState.GlobalValues.earthAtmosphericCH4_ppm + 50) * 0.025));
+            }
+            if (priority == PriorityType.Welfare)
+            {
+                return ((float)((TIGlobalValuesState.GlobalValues.earthAtmosphericCH4_ppm - 50) * 0.025));
+            }
+            return 0f;
+        }
+        public float HarmonyImpactOnCohesion
+        {
+            get
+            {
+                return ((float)((this.sustainability - 5) * 0.5));
+            }
+        }
+        public float cohesionRestState
+        {
+            get
+            {
+                if (this.extant)
+                {
+                    float num = 16f + this.inequalityImpactOnCohesion + this.perCapitaGDPImpactOnCohesion + this.populationImpactOnCohesion + this.regionsImpactOnCohesion + this.rivalsImpactOnCohesion + this.warsImpactOnCohesion + this.publicEliteDivideImpactOnCohesion + this.publicOpinionImpactOnCohesion + this.autocracyImpactOnCohesion + this.anocracyImpactOnCohesion + HarmonyImpactOnCohesion;
+                    num += this.DemocracyImpactOnCohesion(num);
+                    return Mathf.Clamp(num, 0f, 10f);
+                }
+                return this.cohesion;
+            }
+        }
+
+        public void Coup(TICouncilorState councilor = null, int strength = 0)
+        {
+            List<TIGameState> controlPointOwnersByPoint = this.controlPointOwnersByPoint;
+            TIFactionState executiveFaction = this.executiveFaction;
+            TIFactionState tifactionState = null;
+
+            int Casualties = UnityEngine.Random.Range(0, 101);
+            patch_TIGlobalValuesState.GlobalValues.AddtoCasualties(Casualties, false);///Coup casualties
+            
+            if (councilor != null)
+            {
+                tifactionState = (councilor.faction.IsAlienFaction ? GameStateManager.AlienProxy() : councilor.faction);
+            }
+            List<int> list = this.NewGovernment(ControlPointChangeCause.Coup, tifactionState);
+            this.AddToDemocracy(UnityEngine.Random.Range(-2f, 1f), TINationState.DemocracyChangeReason.DemReason_Coup);
+            this.AddToUnrest(UnityEngine.Random.Range(-3f, 0f), TINationState.UnrestChangeReason.UnrestReason_Coup, 10f);
+            this.AddToCohesion(UnityEngine.Random.Range(-1f, 1f), TINationState.CohesionChangeReason.CohesionReason_Coup);
+            this.GDPPctChange(UnityEngine.Random.Range(0f, -0.1f), TINationState.GDPChangeReason.GDPReason_Coup);
+            int maxToGrant = (list.Count > 0) ? Mathf.Clamp(list.Max() + 1, 2, this.numControlPoints) : Mathf.Min(2, this.numControlPoints);
+            this.GrantControlPointsToUnrestingFactions(maxToGrant, ControlPointChangeCause.Coup);
+            if (councilor != null)
+            {
+                strength = Math.Min(strength, this.numControlPoints);
+                int num = 0;
+                TIControlPoint ticontrolPoint = this.FirstNativeControlPoint();
+                if (ticontrolPoint != null)
+                {
+                    if (this.NumNativeControlPoints < strength)
+                    {
+                        num = this.numControlPoints - strength;
+                    }
+                    else
+                    {
+                        num = ticontrolPoint.positionInNation;
+                    }
+                }
+                for (int i = 0; i < strength; i++)
+                {
+                    if (this.controlPoints[num + i].faction != tifactionState)
+                    {
+                        this.ChangeControlPointOwner(num + i, ControlPointChangeCause.Coup, tifactionState);
+                    }
+                }
+            }
+            TIControlPoint ticontrolPoint2 = this.FirstNativeControlPoint();
+            if (ticontrolPoint2 != null)
+            {
+                foreach (TIControlPoint ticontrolPoint3 in this.controlPoints)
+                {
+                    if (ticontrolPoint3.positionInNation > ticontrolPoint2.positionInNation && ticontrolPoint3.faction != null)
+                    {
+                        this.ChangeControlPointOwner(ticontrolPoint3.positionInNation, ControlPointChangeCause.Coup, null);
+                    }
+                }
+            }
+            if (councilor != null)
+            {
+                TINotificationQueueState.LogCoup(this, controlPointOwnersByPoint, tifactionState);
+            }
+            else
+            {
+                TINotificationQueueState.LogCoup(this, controlPointOwnersByPoint, null);
+            }
+            if (executiveFaction != null && this.executiveFaction != null && this.executiveFaction != executiveFaction)
+            {
+                foreach (TINationState tinationState in new List<TINationState>(this.allies))
+                {
+                    if (this.CanEndAlliance(tinationState))
+                    {
+                        this.EndAlliance(null, tinationState);
+                        this.improveRelationsCooldowns.Remove(tinationState);
+                        tinationState.improveRelationsCooldowns.Remove(this);
+                    }
+                }
+            }
+            TIFactionState[] array = GameStateManager.AllFactions();
+            for (int j = 0; j < array.Length; j++)
+            {
+                foreach (TICouncilorState ticouncilorState in array[j].activeCouncilors)
+                {
+                    if (councilor != ticouncilorState && ticouncilorState.HasMission && ticouncilorState.activeMission.target == this && ticouncilorState.activeMission.missionTemplate == TIFactionState.coupMission)
+                    {
+                        ticouncilorState.activeMission.ResolveMission(TIMissionState.AbortReason.NationAlreadyCouped, "");
+                    }
+                }
+            }
+            this.factionUnrestAttempts.Clear();
+        }
+
+        [SerializeField]
+        private Dictionary<TIFactionState, int> factionUnrestAttempts = new Dictionary<TIFactionState, int>();
 
         private float BestCurrentSustainabilityValue()
         {
             TIGlobalValuesState globalValues = TIGlobalValuesState.GlobalValues;
             float num = (globalValues != null) ? globalValues.initialSustainabilityMin : 0f;
             float num2 = TIEffectsState.SumEffectsModifiers(Context.Environment_BestSustainabilityValue, this, num);
-            return Mathf.Max(0f, num + num2);
+            return 0;
         }
+
         public static float MeanAnnualGDPDamage(float tempAnomaly_C, float inequality)
         {
             float num = 0f;
@@ -202,19 +660,9 @@ namespace PavonisInteractive.TerraInvicta
                     }
                 }
             }
-            return Mathf.Clamp(num, -0.99f, 0f);
+            //return Mathf.Clamp(num, -0.99f, 0f);
+            return 0;//Disabled
         }
-        //public void ActivateBuildSpaceDefenses()
-        //{
-        //    if (!this.canBuildSpaceDefenses)
-        //    {
-        //        this.canBuildSpaceDefenses = true;
-        //        foreach (TIControlPoint ticontrolPoint in this.controlPoints)
-        //        {
-        //            ticontrolPoint.SetControlPointPriority(PriorityType.BuildSpaceDefenses, ticontrolPoint.GetControlPointPriority(PriorityType.BuildSpaceDefenses, true), false, false);
-        //        }
-        //    }
-        //}
         private float boostPerYear_dekatons
         {
             get
@@ -222,7 +670,7 @@ namespace PavonisInteractive.TerraInvicta
                 return this.regions.Sum((TIRegionState region) => region.boostPerYear_dekatons);
             }
         }
-
+     
         public void OnFoundMilitaryPriorityComplete()
         {
             //TIFactionState controlPointTypeOwner = this.GetControlPointTypeOwner(ControlPointType.Aristocracy);
@@ -235,7 +683,7 @@ namespace PavonisInteractive.TerraInvicta
             }
             foreach (patch_TIControlPoint ticontrolPoint in this.controlPoints)
             {
-                float num = 0f + (float)this.currentMagicRegions;
+                   float num = 0f + (float)this.currentMagicRegions * (patch_TIGlobalValuesState.GlobalValues.globalSeaLevelAnomaly_cm /100);
                 // Log.Debug($"control1 {control}");
                 if (ticontrolPoint.faction != null && !ticontrolPoint.benefitsDisabled)
                 {
@@ -345,69 +793,57 @@ namespace PavonisInteractive.TerraInvicta
 				return this.regions.Count((TIRegionState region) => region.template.oilResource && !region.IsFullyOccupied());
 			}
 		}
-        public void BuildAntiSpaceDefensesPriorityComplete()
+        public static string SustainabilityValueForDisplay(float sustainability, int extendValue = 2)//just show the number
         {
-            //TIFactionState controlPointTypeOwner = this.GetControlPointTypeOwner(ControlPointType.Aristocracy);
-            //TIFactionState controlPointTypeOwner2 = this.GetControlPointTypeOwner(ControlPointType.ExtractiveSector);
-            float control = 0;
 
-            foreach (patch_TIControlPoint ticontrolPoint in this.controlPoints)
-            {
-                control += 1;
-            }
-            foreach (patch_TIControlPoint ticontrolPoint in this.controlPoints)
-            {
-                float num = 0f + (float)this.currentMagicRegions;
-               // Log.Debug($"control1 {control}");
-                if (ticontrolPoint.faction != null && !ticontrolPoint.benefitsDisabled)
-                {
-                   // Log.Debug($"Num1 {num}");
-                   // Log.Debug($"control2 {control}");
-                    num /= control;
-                   // Log.Debug($"Num2 {num}");
-                    ticontrolPoint.faction.AddToCurrentResource(num, patch_FactionResource.Magic, false);
-                    //ticontrolPoint.faction.thisWeeksCumulativeSpoils += num;
-                }
-            }
-            this.AddToSustainability(this.spoilsSustainabilityChange * this.currentMagicRegions);
-            float num2 = -0.0050f * this.currentMagicRegions;
-            TIGlobalValuesState.GlobalValues.AddCO2_ppm(num2, GHGSources.SpoilsPriority);
-            //TIGlobalValuesState.GlobalValues.AddMagicPriorityEnvEffect(this, this.priorityEffectPopScaling * this.sustainability);
+            return TIUtilities.FormatSmallNumber(Mathf.Max(0,sustainability), 7, extendValue, true, false);
         }
-
-        public Tuple<double, double, double> GHGsFromEconomy_tons(bool monthly, float proposedSustainabilityChange = 0f)
+        public Tuple<double, double, double> GHGsFromEconomy_tons(bool monthly, float proposedSustainabilityChange = 0f)//Nation impact on Harmony and Unity
         {
-            float num = Mathf.Min(this.perCapitaGDP / 15000f, 1f);
-            float num2 = Mathf.Min(this.perCapitaGDP / 7500f, 1f);
-            double num3 = this.GDP / 1000000000.0;
-            double num4 = num3 * 275000.0;
-            double num5 = num3 * 275000.0;
-            num5 += (double)this.population * 2.41 * (double)num * (double)num * (double)num2 * (double)num2;
-            num5 += Mathd.Min((double)this.oilRegions * 250000000.0, num4 / 10.0);
-            num5 *= (double)((this.sustainability *-1f) + proposedSustainabilityChange);
+            double Allies = this.allies.Count;
+            Allies -= this.rivals.Count;
             if (monthly)
             {
-                num5 /= 12.0;
+                Allies /= 12.0;
             }
-            double item = num5 * 0.8230000138282776 * 0.4000000059604645;
-            double item2 = num5 * 0.11500000208616257 * 1.0 / 21.0;
-            double item3 = num5 * 0.06199999898672104 * 1.0 / 289.0;
+
+            double FederationBonus = 0;
+            if (this.inFederation)
+            {
+                FederationBonus = this.federation.members.Count;
+            }
+            if (monthly)
+            {
+                FederationBonus /= 12.0;
+            }
+
+            double Harmony = (double)this.population / 1000000;
+            float CurrentHarmony = TIGlobalValuesState.GlobalValues.earthAtmosphericCH4_ppm / 10;
+            Harmony *= (-CurrentHarmony + Mathd.Max(0f, (double)(this.sustainability + proposedSustainabilityChange)));
+            Harmony /= 100;
+            if (monthly)
+            {
+                Harmony /= 12.0;
+            }
+            double item = 0;
+            double item2 = Harmony;
+            double item3 = FederationBonus + Allies;
             return new Tuple<double, double, double>(item, item2, item3);
         }
         public static double CO2toPPM(double input_tons)
         {
-            return input_tons * 0;
+            return input_tons;
         }
         public static double CH4toPPM(double input_tons)
         {
-            return input_tons / 2850308000.0;
+            return input_tons;
         }
 
         public static double N2OtoPPM(double input_tons)
         {
-            return input_tons * 0;
+            return input_tons ;
         }
-        public float get_spaceFundingPriorityIncomeChange()
+        public float get_spaceFundingPriorityIncomeChange()///I might want to simplfy the two formulas to both use IP, i can do it
         {
             return TemplateManager.global.fundingPriorityBaseIncomeIncrease * (float)this.numControlPoints_unclamped + this.numCoreEconomicRegions_dailyCache * 5;
         }

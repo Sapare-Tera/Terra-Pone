@@ -28,674 +28,37 @@ using System.Reflection;
 using PavonisInteractive.TerraInvicta.Entities;
 using PavonisInteractive.TerraInvicta.TIVirtualFleetState;
 using System.IO;
+using PavonisInteractive.TerraInvicta.Systems.UI;
 
 namespace PavonisInteractive.TerraInvicta
 {
-
-    public class patch_TIEffectsState : TIEffectsState
-    {
-        [MonoModOriginal] public static extern void orig_ProcessInstantEffect(TIFactionState sourceFaction, EffectTargetType effectTargetType, EffectSecondaryStateType secondaryStateType, InstantEffect instantEffect, float value, float randomizer, string strValue, TIGameState inputState = null, TIGameState secondaryinputState = null);
-
-        public static void ProcessInstantEffect(TIFactionState sourceFaction, EffectTargetType effectTargetType, EffectSecondaryStateType secondaryStateType, InstantEffect instantEffect, float value, float randomizer, string strValue, TIGameState inputState = null, TIGameState secondaryinputState = null)
-        {
-            orig_ProcessInstantEffect( sourceFaction,  effectTargetType,  secondaryStateType,  instantEffect,  value,  randomizer,  strValue,  inputState, secondaryinputState);
-            switch (instantEffect)
-            {
-                case (InstantEffect)patch_InstantEffect.GrantControlPoint:
-                    {
-                        if (!(sourceFaction != null))
-                        {
-                            return;
-                        }
-                        String[] args = new String[] { strValue };
-
-                        TINationState tinationState = GameStateManager.IterateByClass<TINationState>(false).FirstOrDefault((TINationState x) => x.templateName == args[0]);
-
-                        TIControlPoint ticontrolPoint2 = tinationState.ref_nation.GetControlPoint((int)value);
-                        if (ticontrolPoint2 == null && tinationState.ref_nation.NumNativeControlPoints > 1)
-                        {
-                            ticontrolPoint2 = tinationState.ref_nation.FirstNativeControlPoint();
-                        }
-                        if (ticontrolPoint2 != null)
-                        {
-                            tinationState.ref_nation.ChangeControlPointOwner(ticontrolPoint2.positionInNation, ControlPointChangeCause.Event, sourceFaction);
-                            return;
-                        }
-                        return;
-                    }
-               }
-        }
-    }
-
-
-        public class patch_GeneralControlsController : GeneralControlsController
-    {
-        private Dictionary<patch_FactionResource, int> proposedResourceSales;
-
-        public TMP_Text waterInfoText;
-
-        public Transform MagicPanel;
-
-        [Header("Resources Data")]
-        public TMP_Text magicInfoText;
-
-        private void UpdateResourceData(TIFactionState faction)
-        {
-            this.incomeInfoText.SetText(GeneralControlsController.ResourceReportString(faction, FactionResource.Money), true);
-            this.influenceInfoText.SetText(GeneralControlsController.ResourceReportString(faction, FactionResource.Influence), true);
-            this.operationInfoText.SetText(GeneralControlsController.ResourceReportString(faction, FactionResource.Operations), true);
-            this.boostInfoText.SetText(GeneralControlsController.ResourceReportString(faction, FactionResource.Boost), true);
-            this.researchInfoText.SetText(GeneralControlsController.ResourceReportString(faction, FactionResource.Research), true);
-            this.missionControlInfoText.SetText(GeneralControlsController.ResourceReportString(faction, FactionResource.MissionControl), true);
-            //this.magicInfoText.SetText(GeneralControlsController.ResourceReportString(faction, (FactionResource)patch_FactionResource.Magic), true);
-            this.controlPointMaintenanceText.SetText(GeneralControlsController.ControlPointMaintenanceString(faction), true);
-            bool unlockedSpaceResources = faction.UnlockedSpaceResources;
-            bool unlockedAntimatter = faction.UnlockedAntimatter;
-            bool unlockedExotics = faction.UnlockedExotics;
-            this.waterPanel.gameObject.SetActive(unlockedSpaceResources);
-            this.volatilesPanel.gameObject.SetActive(unlockedSpaceResources);
-            this.baseMetalsPanel.gameObject.SetActive(unlockedSpaceResources);
-            this.nobleMetalsPanel.gameObject.SetActive(unlockedSpaceResources);
-            this.fissilesPanel.gameObject.SetActive(unlockedSpaceResources);
-            // this.MagicPanel.gameObject.SetActive(unlockedSpaceResources);
-            this.antimatterPanel.gameObject.SetActive(unlockedAntimatter);
-            this.exoticsPanel.gameObject.SetActive(unlockedExotics);
-            if (unlockedSpaceResources)
-            {
-                this.SetSpaceResourceValuesInBar(faction, FactionResource.Water, this.waterInfoText, this.waterPanel);
-                this.SetSpaceResourceValuesInBar(faction, FactionResource.Volatiles, this.volatilesInfoText, this.volatilesPanel);
-                this.SetSpaceResourceValuesInBar(faction, FactionResource.Metals, this.baseMetalsInfoText, this.baseMetalsPanel);
-                this.SetSpaceResourceValuesInBar(faction, FactionResource.NobleMetals, this.nobleMetalsInfoText, this.nobleMetalsPanel);
-                this.SetSpaceResourceValuesInBar(faction, FactionResource.Fissiles, this.fissilesInfoText, this.fissilesPanel);
-                //   this.SetSpaceResourceValuesInBar(faction, (FactionResource)patch_FactionResource.Magic, this.fissilesInfoText, this.fissilesPanel);
-            }
-            if (unlockedAntimatter)
-            {
-                this.SetSpaceResourceValuesInBar(faction, FactionResource.Antimatter, this.antimatterInfoText, this.antimatterPanel);
-            }
-            if (unlockedExotics)
-            {
-                this.SetSpaceResourceValuesInBar(faction, (FactionResource)patch_FactionResource.Magic, this.exoticsInfoText, this.exoticsPanel);
-            }
-        }
-        private void SetSpaceResourceValuesInBar(TIFactionState faction, FactionResource resourceType, TMP_Text reportText, Transform panel)
-        {
-            if ((float)Screen.width / (float)Screen.height >= 1.5f)
-            {
-                panel.gameObject.GetComponent<LayoutElement>().preferredWidth = 105f;
-                reportText.SetText(GeneralControlsController.ResourceReportString(faction, resourceType), true);
-                return;
-            }
-            panel.gameObject.GetComponent<LayoutElement>().preferredWidth = 65f;
-            float currentResourceAmount = faction.GetCurrentResourceAmount(resourceType);
-            if (resourceType == FactionResource.Antimatter)
-            {
-                reportText.SetText(TIUtilities.FormatBigOrSmallNumber((double)currentResourceAmount, 1, 7, 0, false), true);
-                return;
-            }
-            reportText.SetText(TIUtilities.FormatBigNumber((double)currentResourceAmount, 1), true);
-        }
-
-        private static bool showMonthlyIncomes
-        {
-            get
-            {
-                return GameControl.control.activePlayer.showMonthlyIncomesInTopBarAndIntel;
-            }
-        }
-
-        public static string ResourceReportString(TIFactionState faction, FactionResource resourceType)
-        {
-            string result = string.Empty;
-            switch (resourceType)
-            {
-                case FactionResource.Money:
-                case FactionResource.Influence:
-                case FactionResource.Operations:
-                case FactionResource.Boost:
-                case FactionResource.Water:
-                case FactionResource.Volatiles:
-                case FactionResource.Metals:
-                case FactionResource.NobleMetals:
-                case FactionResource.Fissiles:
-                case FactionResource.Exotics:
-                case (FactionResource)patch_FactionResource.Magic:
-                    {
-                        float num;
-                        if (patch_GeneralControlsController.showMonthlyIncomes)
-                        {
-                            num = faction.GetMonthlyIncome(resourceType, false, false);
-                        }
-                        else
-                        {
-                            num = faction.GetDailyIncome(resourceType, false, false);
-                        }
-                        float currentResourceAmount = faction.GetCurrentResourceAmount(resourceType);
-                        if (num == 0f)
-                        {
-                            result = TIUtilities.FormatBigOrSmallNumber((double)currentResourceAmount, 1, 7, 0, false);
-                        }
-                        else if (num > 0f)
-                        {
-                            result = Loc.T("UI.GeneralControls.ResourcesGain", new object[]
-                            {
-                        TIUtilities.FormatBigNumber((double)currentResourceAmount, 1),
-                        TIUtilities.FormatBigOrSmallNumber((double)num, 0, 2, 0, false)
-                            });
-                        }
-                        else if (num <= -0.01f)
-                        {
-                            result = Loc.T("UI.GeneralControls.ResourcesLoss", new object[]
-                            {
-                        TIUtilities.FormatBigNumber((double)currentResourceAmount, 1),
-                        TIUtilities.FormatBigOrSmallNumber((double)num, 0, 2, 0, false)
-                            });
-                        }
-                        else
-                        {
-                            result = Loc.T("UI.GeneralControls.ResourcesSmallLoss", new object[]
-                            {
-                        TIUtilities.FormatBigNumber((double)currentResourceAmount, 1),
-                        "0"
-                            });
-                        }
-                        break;
-                    }
-                case FactionResource.Research:
-                    {
-                        float num2;
-                        if (patch_GeneralControlsController.showMonthlyIncomes)
-                        {
-                            num2 = faction.GetMonthlyIncome(resourceType, false, false) * (1f + faction.BonusPctFromDistribution);
-                        }
-                        else
-                        {
-                            num2 = faction.GetDailyIncome(resourceType, false, false) * (1f + faction.BonusPctFromDistribution);
-                        }
-                        result = TIUtilities.FormatBigNumber((double)num2, 1);
-                        break;
-                    }
-                case FactionResource.Projects:
-                    result = faction.GetDailyIncome(resourceType, false, false).ToString("N0");
-                    break;
-                case FactionResource.MissionControl:
-                    {
-                        float dailyIncome = faction.GetDailyIncome(resourceType, false, false);
-                        float num3 = (float)faction.GetMissionControlUsage();
-                        if (num3 > dailyIncome)
-                        {
-                            result = Loc.T("UI.GeneralControls.ResourcesUsage", new object[]
-                            {
-                        new StringBuilder("<color=#EC2100>").Append(num3.ToString()).Append("</color>"),
-                        dailyIncome.ToString("N0")
-                            });
-                        }
-                        else
-                        {
-                            result = Loc.T("UI.GeneralControls.ResourcesUsage", new object[]
-                            {
-                        num3.ToString("N0"),
-                        dailyIncome.ToString("N0")
-                            });
-                        }
-                        break;
-                    }
-                case FactionResource.Antimatter:
-                    {
-                        float num4;
-                        if (patch_GeneralControlsController.showMonthlyIncomes)
-                        {
-                            num4 = faction.GetMonthlyIncome(resourceType, false, false);
-                        }
-                        else
-                        {
-                            num4 = faction.GetDailyIncome(resourceType, false, false);
-                        }
-                        float currentResourceAmount2 = faction.GetCurrentResourceAmount(resourceType);
-                        if (num4 == 0f)
-                        {
-                            result = TIUtilities.FormatBigOrSmallNumber((double)currentResourceAmount2, 1, 7, 0, true);
-                        }
-                        else if (num4 > 0f)
-                        {
-                            result = Loc.T("UI.GeneralControls.ResourcesGain", new object[]
-                            {
-                        TIUtilities.FormatBigOrSmallNumber((double)currentResourceAmount2, 1, 7, 0, true),
-                        TIUtilities.FormatBigOrSmallNumber((double)num4, 1, 7, 0, true)
-                            });
-                        }
-                        else if (num4 <= -1f)
-                        {
-                            result = Loc.T("UI.GeneralControls.ResourcesLoss", new object[]
-                            {
-                        TIUtilities.FormatBigOrSmallNumber((double)currentResourceAmount2, 1, 7, 0, true),
-                        Math.Truncate((double)num4).ToString("N0")
-                            });
-                        }
-                        else
-                        {
-                            result = Loc.T("UI.GeneralControls.ResourcesSmallLoss", new object[]
-                            {
-                        TIUtilities.FormatBigOrSmallNumber((double)currentResourceAmount2, 1, 7, 0, true),
-                        TIUtilities.FormatBigOrSmallNumber((double)num4, 1, 7, 0, true)
-                            });
-                        }
-                        break;
-                    }
-            }
-            return result;
-        }
-
-
-    }
-
-    [MonoModPatch("PavonisInteractive.TerraInvicta.CouncilorAugmentationOption")]
-    public struct CouncilorAugmentationOption
-    {
-        [MonoModIgnore] public int statValue { get; private set; }
-
-        [MonoModIgnore] public int XPCost { get; private set; }
-        [MonoModIgnore] public TITraitTemplate traitToLose { get; private set; }
-        [MonoModIgnore] public CouncilorAttribute stat { get; private set; }
-        [MonoModIgnore] public TITraitTemplate traitToGain { get; private set; }
-        [MonoModIgnore] public TIResourcesCost resourceCost { get; private set; }
-
-        public void SetProperties_PVC(CouncilorAttribute stat, patch_TITraitTemplate trait, float addTraitCostMultiplier, float councilorXPModifier)
-        {
-            this.stat = stat;
-            this.traitToLose = null;
-            this.traitToGain = null;
-            this.XPCost = 0;
-            if (stat != CouncilorAttribute.None)
-            {
-                this.statValue = 1;
-                this.XPCost = Mathf.RoundToInt((float)TemplateManager.global.XPToLevelUp * (1f + councilorXPModifier));
-            }
-            else
-            {
-                this.statValue = 0;
-            }
-            this.resourceCost = new TIResourcesCost();
-            if (trait != null)
-            {
-                if (trait.magicCost > 0 || trait.XPCost > 0 || trait.moneyCost > 0 || trait.influenceCost > 0 || trait.opsCost > 0 || trait.boostCost > 0)
-                {
-                    this.traitToGain = trait;
-                    this.XPCost = Mathf.RoundToInt((float)trait.XPCost * addTraitCostMultiplier * (1f + councilorXPModifier));
-                    this.resourceCost.AddCost((FactionResource)patch_FactionResource.Magic, (float)trait.moneyCost * addTraitCostMultiplier, true);
-                    this.resourceCost.AddCost(FactionResource.Influence, (float)trait.influenceCost * addTraitCostMultiplier, true);
-                    this.resourceCost.AddCost(FactionResource.Operations, (float)trait.opsCost * addTraitCostMultiplier, true);
-                    this.resourceCost.AddCost(FactionResource.Boost, (float)trait.boostCost * addTraitCostMultiplier, true);
-                    this.resourceCost.AddCost((FactionResource)patch_FactionResource.Magic, (float)trait.magicCost * addTraitCostMultiplier, true);
-                    this.traitToLose = this.traitToGain.requiredTraitForUpgrade;
-                    return;
-                }
-                if (trait.magicCost < 0 || trait.XPCost < 0 || trait.moneyCost < 0 || trait.influenceCost < 0 || trait.opsCost < 0 || trait.boostCost < 0)
-                {
-                    this.traitToLose = trait;
-                    this.XPCost = Mathf.RoundToInt((float)Mathf.Abs(this.traitToLose.XPCost) * (1f + councilorXPModifier));
-                    this.resourceCost.AddCost(FactionResource.Money, (float)Mathf.Abs(this.traitToLose.moneyCost), true);
-                    this.resourceCost.AddCost(FactionResource.Influence, (float)Mathf.Abs(this.traitToLose.influenceCost), true);
-                    this.resourceCost.AddCost(FactionResource.Operations, (float)Mathf.Abs(this.traitToLose.opsCost), true);
-                    this.resourceCost.AddCost(FactionResource.Boost, (float)Mathf.Abs(this.traitToLose.boostCost), true);
-                    //this.resourceCost.AddCost((FactionResource)patch_FactionResource.Magic, (float)Mathf.Abs(this.traitToLose.magicCost), true);
-                }
-            }
-        }
-        public CouncilorAugmentationOption(CouncilorAttribute stat, TITraitTemplate trait, float addTraitCostMultiplier, float councilorXPModifier)
-        {
-            this.stat = stat;
-            this.traitToLose = null;
-            this.traitToGain = null;
-            this.XPCost = 0;
-            if (stat != CouncilorAttribute.None)
-            {
-                this.statValue = 1;
-                this.XPCost = Mathf.RoundToInt((float)TemplateManager.global.XPToLevelUp * (1f + councilorXPModifier));
-            }
-            else
-            {
-                this.statValue = 0;
-            }
-            this.resourceCost = new TIResourcesCost();
-            if (trait != null)
-            {
-                if (trait.XPCost > 0 || trait.moneyCost > 0 || trait.influenceCost > 0 || trait.opsCost > 0 || trait.boostCost > 0)
-                {
-                    this.traitToGain = trait;
-                    this.XPCost = Mathf.RoundToInt((float)trait.XPCost * addTraitCostMultiplier * (1f + councilorXPModifier));
-                    this.resourceCost.AddCost(FactionResource.Money, (float)trait.moneyCost * addTraitCostMultiplier, true);
-                    this.resourceCost.AddCost(FactionResource.Influence, (float)trait.influenceCost * addTraitCostMultiplier, true);
-                    this.resourceCost.AddCost(FactionResource.Operations, (float)trait.opsCost * addTraitCostMultiplier, true);
-                    this.resourceCost.AddCost(FactionResource.Boost, (float)trait.boostCost * addTraitCostMultiplier, true);
-                    this.traitToLose = this.traitToGain.requiredTraitForUpgrade;
-                    return;
-                }
-                if (trait.XPCost < 0 || trait.moneyCost < 0 || trait.influenceCost < 0 || trait.opsCost < 0 || trait.boostCost < 0)
-                {
-                    this.traitToLose = trait;
-                    this.XPCost = Mathf.RoundToInt((float)Mathf.Abs(this.traitToLose.XPCost) * (1f + councilorXPModifier));
-                    this.resourceCost.AddCost(FactionResource.Money, (float)Mathf.Abs(this.traitToLose.moneyCost), true);
-                    this.resourceCost.AddCost(FactionResource.Influence, (float)Mathf.Abs(this.traitToLose.influenceCost), true);
-                    this.resourceCost.AddCost(FactionResource.Operations, (float)Mathf.Abs(this.traitToLose.opsCost), true);
-                    this.resourceCost.AddCost(FactionResource.Boost, (float)Mathf.Abs(this.traitToLose.boostCost), true);
-                }
-            }
-        }
-
-
-        public bool CouncilorEligibleForAugmentation(TICouncilorState councilor)
-        {
-            TIFactionState faction = councilor.faction;
-            if (this.stat != CouncilorAttribute.None && this.traitToGain == null && this.traitToLose == null && councilor.GetAttribute(this.stat, false, true, true, false) < TemplateManager.global.maxCouncilorAttribute)
-            {
-                return true;
-            }
-            if (this.traitToGain != null)
-            {
-                TIProjectTemplate requiredProject = this.traitToGain.requiredProject;
-                if (requiredProject == null || faction.completedProjects.Contains(requiredProject))
-                {
-                    TITraitTemplate requiredTraitForUpgrade = this.traitToGain.requiredTraitForUpgrade;
-                    List<TITraitTemplate> list = new List<TITraitTemplate>(councilor.traits);
-                    if (requiredTraitForUpgrade != null)
-                    {
-                        list.Remove(requiredTraitForUpgrade);
-                    }
-                    int traitGrouping = this.traitToGain.grouping.GetValueOrDefault();
-                    if ((traitGrouping == 0 || list.None(delegate (TITraitTemplate x)
-                    {
-                        int? grouping = x.grouping;
-                        //int test = traitGrouping;
-                        return grouping.GetValueOrDefault() == traitGrouping & grouping != null;
-                    })) && (requiredProject != null || councilor.GetIndividualTraitChance(this.traitToGain) > 0f || (requiredTraitForUpgrade != null && councilor.traits.Contains(requiredTraitForUpgrade))))
-                    {
-                        return this.traitToLose == null || councilor.traits.Contains(this.traitToLose);
-                    }
-                }
-            }
-            else if (this.traitToLose != null)
-            {
-                return councilor.traits.Contains(this.traitToLose);
-            }
-            return false;
-        }
-    }
-
-    public class patch_TICouncilorState : TICouncilorState
-    {
-
-        public bool SufficientCapacityForOrg(TIOrgState org)
-        {
-            return this.orgs.Count < (TemplateManager.global.councilorMaxOrgs + 5) && this.availableAdministration >= org.tier - org.administration && this.orgsWeight + org.tier <= this.maxCouncilorAttribute;
-        }
-
-        public int SpareCapacityForOrgs()
-        {
-            return Mathf.Min((TemplateManager.global.councilorMaxOrgs + 5)- this.orgs.Count, this.availableAdministration);
-        }
-
-            public CouncilorAugmentationOption Addmagic(patch_TITraitTemplate trait)
-        {
-            CouncilorAugmentationOption aug = new CouncilorAugmentationOption();
-            patch_TICouncilorState councilor;
-            aug.SetProperties_PVC(CouncilorAttribute.None, trait, 1f, this.XPModifier);
-            return aug;
-        }
-
-        public int Adminholder = 0;
-        public int ScienceHolder = 0;
-        private int maxCouncilorAttribute
-        {
-            get
-            {
-                return TemplateManager.global.maxCouncilorAttribute;
-            }
-        }
-        public extern List<CouncilorAugmentationOption> orig_GetCandidateAugmentations();
-
-
-
-        public List<CouncilorAugmentationOption> GetCandidateAugmentations()
-        {
-            List<CouncilorAugmentationOption> list = new List<CouncilorAugmentationOption>();
-
-           if(isAlien)
-           foreach (CouncilorAttribute councilorAttribute in Enums.CouncilorAttributes)
-			{
-				if (councilorAttribute != CouncilorAttribute.Loyalty && councilorAttribute != CouncilorAttribute.ApparentLoyalty && this.GetAttribute(councilorAttribute, false, true, true, false) < this.maxCouncilorAttribute)
-				{
-					list.Add(new CouncilorAugmentationOption(councilorAttribute, null, 1f, this.XPModifier));
-				}
-			}
-
-
-            foreach (patch_TITraitTemplate titraitTemplate in TemplateManager.IterateByClass<TITraitTemplate>(false))
-            {
-                if (!titraitTemplate.costsmagic() && titraitTemplate.CouncilorCanAdd(this) || titraitTemplate.CouncilorCanRemove(this))
-                {
-                    CouncilorAugmentationOption item = new CouncilorAugmentationOption(CouncilorAttribute.None, titraitTemplate, (titraitTemplate.requiredProject == null && this.GetIndividualTraitChance(titraitTemplate) == 0f) ? 2f : 1f, this.XPModifier);
-                    if (item.CouncilorEligibleForAugmentation(this))
-                    {
-                        list.Add(item);
-                    }
-                }
-            }
-            foreach (patch_TITraitTemplate titraitTemplate in TemplateManager.IterateByClass<TITraitTemplate>(false))
-            {
-                if (titraitTemplate.costsmagic() && titraitTemplate.CouncilorCanAdd(this))
-                {
-                    CouncilorAugmentationOption item = new CouncilorAugmentationOption(CouncilorAttribute.None, titraitTemplate, (titraitTemplate.requiredProject == null && this.GetIndividualTraitChance(titraitTemplate) == 0f) ? 2f : 1f, this.XPModifier);
-                    if (item.CouncilorEligibleForAugmentation(this))
-                    {
-                        list.Add(Addmagic(titraitTemplate));
-                    }
-                }
-            }
-            return list;
-        }
-    }
-    public class patch_TIGlobalValuesState : TIGlobalValuesState
-    {
-        public float stratosphericAerosols_ppm { get; private set; }
-        private GameTimeManager gameTime;
-
-
-        public void MonthlyGlobalEnvironmentalChanges()
-        {
-            //float num = this.earthAtmosphericCO2_ppm * 1f / 1000f;
-            //this.AddCO2_ppm(+num, GHGSources.NaturalRemoval);
-            //float num2 = this.earthAtmosphericCH4_ppm * 1f / 1000f;
-            //this.AddCH4_ppm(+num2, GHGSources.NaturalRemoval);
-            //float num3 = this.earthAtmosphericN2O_ppm * 1f / 1000f;
-            //this.AddN2O_ppm(+num3, GHGSources.NaturalRemoval);
-            //float num4 = GameStateManager.AllRegions().Average((TIRegionState x) => x.xenoforming.xenoformingLevel) / 100f;
-            //this.AddCO2_ppm(-num4 * 3.45f / 12f, GHGSources.Xenoforming);
-            this.stratosphericAerosols_ppm = Mathf.Max(this.stratosphericAerosols_ppm * 0.935f - 0.001f, 0f);
-            this.pastEarthAtmosphericCO2_ppm[this.gameTime.currentTime.month - 1] = this.earthAtmosphericCO2_ppm;
-            this.pastEarthAtmosphericCH4_ppm[this.gameTime.currentTime.month - 1] = this.earthAtmosphericCH4_ppm;
-            this.pastEarthAtmosphericN2O_ppm[this.gameTime.currentTime.month - 1] = this.earthAtmosphericN2O_ppm;
-            float anomaly_C = this.temperatureAnomaly_C;
-            if (anomaly_C > 0f)
-            {
-                this.AddToSeaLevel_cm(0.05f * anomaly_C);
-            }
-            GameStateManager.AllExtantNations().ToList<TINationState>().ForEach(delegate (TINationState x)
-            {
-                x.ProcessMonthlyGHGsFromEconomy();
-            });
-            GameStateManager.AllExtantNations().ToList<TINationState>().ForEach(delegate (TINationState x)
-            {
-                x.MonthlyTemperatureEconomicImpact(anomaly_C, this.earthAtmosphericCO2_ppm);///UPDATED
-            });
-        }
-
-        public void AddCO2_ppm(float amount, GHGSources source)
-        {
-            this.earthAtmosphericCO2_ppm += amount;
-            this.earthAtmosphericCO2_ppm = Mathf.Min(this.earthAtmosphericCO2_ppm, 100f);
-            this.earthAtmosphericCO2_ppm = Mathf.Max(this.earthAtmosphericCO2_ppm, 0);
-            Dictionary<GHGSources, double> co2SourcesRecord_ppm = this.CO2SourcesRecord_ppm;
-            co2SourcesRecord_ppm[source] += (double)amount;
-        }
-
-
-        public void AddCH4_ppm(float amount, GHGSources source)
-        {
-            this.earthAtmosphericCH4_ppm += amount;
-            this.earthAtmosphericCH4_ppm = Mathf.Min(this.earthAtmosphericCH4_ppm, 100f);
-            this.earthAtmosphericCH4_ppm = Mathf.Max(this.earthAtmosphericCH4_ppm, 0f);
-            Dictionary<GHGSources, double> ch4SourcesRecord_ppm = this.CH4SourcesRecord_ppm;
-            ch4SourcesRecord_ppm[source] += (double)amount;
-        }
-        public void AddN2O_ppm(float amount, GHGSources source)
-        {
-            this.earthAtmosphericN2O_ppm += amount;
-            this.earthAtmosphericN2O_ppm = Mathf.Min(this.earthAtmosphericN2O_ppm, 100f);
-            this.earthAtmosphericN2O_ppm = Mathf.Max(this.earthAtmosphericN2O_ppm, 0f);
-            Dictionary<GHGSources, double> n2OSourcesRecord_ppm = this.N2OSourcesRecord_ppm;
-            n2OSourcesRecord_ppm[source] += (double)amount;
-        }
-
-
-        public float temperatureAnomalyCO2_C
-        {
-            get
-            {
-                return Mathf.Max(0f, (this.earthAtmosphericCO2_ppm - 100f) / -3.33f);
-            }
-        }
-
-        public float temperatureAnomalyCH4_C
-        {
-            get
-            {
-                return Mathf.Max(0f, (this.earthAtmosphericCH4_ppm - 100f) / -3.33f);
-            }
-        }
-
-        public float temperatureAnomalyN2O_C
-        {
-            get
-            {
-                return Mathf.Max(0f, (this.earthAtmosphericN2O_ppm - 100f) / -3.33f);
-            }
-        }
-
-        public float temperatureAnomaly_C
-        {
-            get
-            {
-                return this.temperatureAnomalyCO2_C + this.temperatureAnomalyCH4_C + this.temperatureAnomalyN2O_C + this.temperatureAnomalyStratosphericAerosols_C;
-            }
-        }
-
-        public float earthAtmosphericCO2_ppm { get; private set; }
-        public float earthAtmosphericCH4_ppm { get; private set; }
-
-        public float earthAtmosphericN2O_ppm { get; private set; }
-
-        public const float xenoformingFullCoverageCO2AnnualConsumption_ppm = 3.45f;
-
-        public float globalSeaLevelAnomaly_cm { get; private set; }
-
-        public void AddToSeaLevel_cm(float amount)
-        {
-            this.globalSeaLevelAnomaly_cm -= amount;
-            if (this.globalSeaLevelAnomaly_cm <= 85f && !this.globalSeaLevelRise1Triggered)
-            {
-                this.globalSeaLevelRise1Triggered = true;
-                GameStateManager.Earth().SetModelResource();
-            }
-            if (this.globalSeaLevelAnomaly_cm <= 50 && !this.globalSeaLevelRise2Triggered)
-            {
-                this.globalSeaLevelRise2Triggered = true;
-                GameStateManager.Earth().SetModelResource();
-            }
-        }
-        public void AddSpoilsPriorityEnvEffect(TINationState nation, float scaling)
-        {
-            float num = nation.economyScore / 100f;
-            this.AddCO2_ppm(scaling * num * (TemplateManager.global.SpoCO2_ppm + TemplateManager.global.SpoResCO2_ppm * (float)nation.miningRegions), GHGSources.SpoilsPriority);
-            this.AddCH4_ppm(scaling * num * (TemplateManager.global.SpoCH4_ppm + TemplateManager.global.SpoResCH4_ppm * (float)nation.miningRegions), GHGSources.SpoilsPriority);
-            this.AddN2O_ppm(scaling * num * (TemplateManager.global.SpoN2O_ppm + TemplateManager.global.SpoResN2O_ppm * (float)nation.miningRegions), GHGSources.SpoilsPriority);
-        }
-
-        //public void AddMagicPriorityEnvEffect(TINationState nation, float scaling)
-        //{
-        //    //float num = nation.economyScore / 100f;
-        //    this.AddCO2_ppm(scaling * num * (-0.0050f * (float)nation.oilRegions), GHGSources.SpoilsPriority);
-        //    this.AddCH4_ppm(scaling * num * (-0.0000f * (float)nation.oilRegions), GHGSources.SpoilsPriority);
-        //    this.AddN2O_ppm(scaling * num * (-0.0000f * (float)nation.oilRegions), GHGSources.SpoilsPriority);
-        //}
-        //public void AddEnviornmentPriorityEnvEffect(TINationState nation)
-        //{
-        //    this.AddCO2_ppm(nation.WelfareCO2Removed(), GHGSources.EnvironmentPriority);
-        //    this.AddCH4_ppm(nation.WelfareCH4Removed(), GHGSources.EnvironmentPriority);
-        //    this.AddN2O_ppm(nation.WelfareN2ORemoved(), GHGSources.EnvironmentPriority);
-        //}
-        //Need to update now that prios changed
-    }
-    //public static class patch_Enums
+    //    public class patch_TIRegionAlienFacilityState : TIRegionAlienFacilityState
     //{
-    //   // public static readonly patch_FactionResource[] FactionResources = ((patch_FactionResource[])Enum.GetValues(typeof(patch_FactionResource))).Except(new patch_FactionResource[1]).ToArray<patch_FactionResource>();
-    //    //public static readonly patch_PriorityType[] PriorityTypes = (patch_PriorityType[])Enum.GetValues(typeof(patch_PriorityType));
 
-    //    public static readonly TechCategory[] TechCategories2 = (TechCategory[])Enum.GetValues(typeof(TechCategory));
+    //    public bool built { get; private set; }
+    //    public void BuildFacility()
+    //    {
+    //        this.built = true;
+    //        this.currentHP = 80f;
+    //        foreach (TIFactionState tifactionState in GameStateManager.AllFactions())
+    //        {
+    //            if (tifactionState.IsAlienProxy || tifactionState.IsAlienFaction)
+    //            {
+    //                tifactionState.SetIntel(this, 1f, null);
+    //            }
+    //            else
+    //            {
+    //                tifactionState.SetIntel(this, 0f, null);
+    //            }
+    //        }
+    //        base.region.ChangeOceanType((WorldOceanType)patch_WorldOceanType.Teleport);
+
+    //        GameControl.eventManager.TriggerEvent(new AlienRegionEntityUpdated(this, base.region), null, new object[]
+    //        {
+    //            base.region
+    //        });
+    //    }
     //}
-
-    public class patch_TISpaceBodyState : TISpaceBodyState
-    {
-        public override void PostVisualizerCreationInit_7()
-        {
-            base.PostVisualizerCreationInit_7();
-
-            if (isEarth && controller != null)
-            {
-                var GO4 = controller.modelLink;
-                var GO5 = GO4.GetComponentInChildren<StagitMaterialChanger>();
-                var GO6 = GO5.GetComponent<Renderer>();
-                var mats3 = GO6.sharedMaterials;
-                foreach (var mat in mats3)
-                {
-                    var names = mat.GetTexturePropertyNames();
-                    mat.SetTexture("_MainTex", AssetBundleManager.LoadAsset<Texture2D>($"earthbundle_d.earth/{mat.mainTexture.name}"));
-                     mat.SetTexture("_Normals", AssetBundleManager.LoadAsset<Texture2D>($"earthnormalbundle_d/{mat.GetTexture("_Normals").name}"));
-                    mat.SetTexture("_SpecGlossMap", AssetBundleManager.LoadAsset<Texture2D>($"earthspecbundle_d/{mat.GetTexture("_SpecGlossMap").name}"));
-                }
-            }
-       }
-    }
-
-
-    public class patch_TIRegionAlienFacilityState : TIRegionAlienFacilityState
-    {
-
-        public bool built { get; private set; }
-        public void BuildFacility()
-        {
-            this.built = true;
-            this.currentHP = 80f;
-            foreach (TIFactionState tifactionState in GameStateManager.AllFactions())
-            {
-                if (tifactionState.IsAlienProxy || tifactionState.IsAlienFaction)
-                {
-                    tifactionState.SetIntel(this, 1f, null);
-                }
-                else
-                {
-                    tifactionState.SetIntel(this, 0f, null);
-                }
-            }
-            base.region.ChangeOceanType((WorldOceanType)patch_WorldOceanType.Teleport);
-
-            GameControl.eventManager.TriggerEvent(new AlienRegionEntityUpdated(this, base.region), null, new object[]
-            {
-                base.region
-            });
-        }
-
-    }
 
     public static class patch_TIUtilities
     {
@@ -779,6 +142,19 @@ namespace PavonisInteractive.TerraInvicta
     }
     public class patch_TISpaceFleetState : TISpaceFleetState, IOperationCapableState, IMobileAsset, ITransferTarget
     {
+        public extern void orig_PostCombat(TISpaceCombatState combat, double combatDuration_s, bool relocate);
+        public void PostCombat(TISpaceCombatState combat, double combatDuration_s, bool relocate)
+        {
+            foreach (TISpaceShipState tispaceShipState in this.ships.ToList<TISpaceShipState>())
+            {
+                if (tispaceShipState.ShipDestroyed() && !tispaceShipState.faction.IsAlienFaction)
+                {
+                        int Crew = tispaceShipState.hull.crew;
+                        patch_TIGlobalValuesState.GlobalValues.AddtoCasualties(Crew, false);
+                }
+                orig_PostCombat(combat, combatDuration_s, relocate);
+            }
+        }
         public bool AllowUseBoostForRepairsResupply
         {
             get
@@ -790,11 +166,136 @@ namespace PavonisInteractive.TerraInvicta
 
     public class patch_TIResourcesCost : TIResourcesCost
     {
+        public patch_TIResourcesCost(FactionResource resource, float value)
+        {
+            this.resourceCosts = new List<ResourceValue>();
+            this.resourceCosts.Add(new ResourceValue(resource, value));
+        }
+        public bool CanAffordWarOption(TIFactionState faction, float maxFractionCanSpend = 1f, List<FactionResource> resourcesToPreserve = null, float maxDays = float.PositiveInfinity)
+        {
+            maxFractionCanSpend = Mathf.Clamp(maxFractionCanSpend, 0f, 1f);
+            foreach (ResourceValue resourceValue in this.resourceCosts)
+            {
+                float WarValue = resourceValue.value * TIGlobalValuesState.GlobalValues.earthAtmosphericCH4_ppm / 100;
+                if (WarValue > 0f)
+                {
+                    if (resourcesToPreserve != null && resourcesToPreserve.Contains(resourceValue.resource))
+                    {
+                        if (faction.GetCurrentResourceAmount(resourceValue.resource) * maxFractionCanSpend < WarValue)
+                        {
+                            return false;
+                        }
+                    }
+                    else if (faction.GetCurrentResourceAmount(resourceValue.resource) < WarValue)
+                    {
+                        return false;
+                    }
+                    if (this.completionTime_days > maxDays)
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        public void PayCostWarOption(TIFactionState faction)
+        {
+            if (this.resourceCosts != null)
+            {
+                foreach (ResourceValue resourceValue in this.resourceCosts)
+                {
+                    float WarValue = resourceValue.value * TIGlobalValuesState.GlobalValues.earthAtmosphericCH4_ppm / 100;
+                    faction.SubtractFromCurrentResource(WarValue, resourceValue.resource, true);
+                    if (resourceValue.resource == FactionResource.Boost && resourceValue.value > 0f)
+                    {
+                        int num = (int)Mathf.Clamp(WarValue * TemplateManager.global.spaceResourceToTons, 1f, 3f);
+                        for (int i = 0; i < num; i++)
+                        {
+                            TIRegionSpaceFacilityState tiregionSpaceFacilityState = faction.SelectRandomLaunchSite();
+                            if (tiregionSpaceFacilityState != null)
+                            {
+                                TIDateTime tidateTime = TITimeState.Now();
+                                tidateTime.AddDays(this.completionTime_days - UnityEngine.Random.Range(0.01f, 0.25f) * this.completionTime_days);
+                                TITimeEvent.CreateNewTimeEvent(tidateTime, tiregionSpaceFacilityState, null, null, "Launch Rocket to Orbit", false, false, TITimeQueueRepeatType.None, 1, true, false);
+                            }
+                        }
+                    }
+                }
+                GameControl.eventManager.TriggerEvent(new FactionResourcesUpdated(faction), null, new object[]
+                {
+                    faction
+                });
+            }
+        }
+
+        public bool CanAffordFederationOption(TIFactionState faction, float maxFractionCanSpend = 1f, List<FactionResource> resourcesToPreserve = null, float maxDays = float.PositiveInfinity)
+        {
+            maxFractionCanSpend = Mathf.Clamp(maxFractionCanSpend, 0f, 1f);
+            foreach (ResourceValue resourceValue in this.resourceCosts)
+            {
+                float WarValue = resourceValue.value * TIGlobalValuesState.GlobalValues.earthAtmosphericCH4_ppm / 100;
+                if (WarValue > 0f)
+                {
+                    if (resourcesToPreserve != null && resourcesToPreserve.Contains(resourceValue.resource))
+                    {
+                        if (faction.GetCurrentResourceAmount(resourceValue.resource) * maxFractionCanSpend < WarValue)
+                        {
+                            return false;
+                        }
+                    }
+                    else if (faction.GetCurrentResourceAmount(resourceValue.resource) < WarValue)
+                    {
+                        return false;
+                    }
+                    if (this.completionTime_days > maxDays)
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        public void PayCostFederationOption(TIFactionState faction)
+        {
+            if (this.resourceCosts != null)
+            {
+                foreach (ResourceValue resourceValue in this.resourceCosts)
+                {
+                    float WarValue = resourceValue.value * TIGlobalValuesState.GlobalValues.earthAtmosphericCH4_ppm / 100;
+                    faction.SubtractFromCurrentResource(WarValue, resourceValue.resource, true);
+                    if (resourceValue.resource == FactionResource.Boost && resourceValue.value > 0f)
+                    {
+                        int num = (int)Mathf.Clamp(WarValue * TemplateManager.global.spaceResourceToTons, 1f, 3f);
+                        for (int i = 0; i < num; i++)
+                        {
+                            TIRegionSpaceFacilityState tiregionSpaceFacilityState = faction.SelectRandomLaunchSite();
+                            if (tiregionSpaceFacilityState != null)
+                            {
+                                TIDateTime tidateTime = TITimeState.Now();
+                                tidateTime.AddDays(this.completionTime_days - UnityEngine.Random.Range(0.01f, 0.25f) * this.completionTime_days);
+                                TITimeEvent.CreateNewTimeEvent(tidateTime, tiregionSpaceFacilityState, null, null, "Launch Rocket to Orbit", false, false, TITimeQueueRepeatType.None, 1, true, false);
+                            }
+                        }
+                    }
+                }
+                GameControl.eventManager.TriggerEvent(new FactionResourcesUpdated(faction), null, new object[]
+                {
+                    faction
+                });
+            }
+        }
+
+
         public List<ResourceValue> resourceCosts { get; private set; }
         public float completionTime_days { get; private set; }
 
-
-public patch_TIResourcesCost GetBoostSubstitutedCost(TIFactionState faction, TIGameState location, bool ignoreTime = false, List<ResourceValue> availableResources = null)
+        public patch_TIResourcesCost()
+        {
+            this.resourceCosts = new List<ResourceValue>();
+        }
+        public patch_TIResourcesCost GetBoostSubstitutedCost(TIFactionState faction, TIGameState location, bool ignoreTime = false, List<ResourceValue> availableResources = null)
 		{
             patch_TIResourcesCost tiresourcesCost = new patch_TIResourcesCost();
 			foreach (ResourceValue resourceValue in this.resourceCosts)
@@ -1103,6 +604,58 @@ public patch_TIResourcesCost GetBoostSubstitutedCost(TIFactionState faction, TIG
         };
     }
 
+    [MonoModIgnore] class EffectContextListItemController : MonoBehaviour {
+        public void SetListItem(patch_Context context, ResearchScreenController controller)
+        {
+            this.effectContext = context;
+            this.controller = controller;
+            this.selectContextButtonText.SetText(ResearchScreenController.EffectContextToString((Context)this.effectContext));
+        }
+        public void OnContextButtonPressed()
+        {
+            this.controller.OnEffectContextButtonPressed((Context)this.effectContext);
+        }
+        private ResearchScreenController controller;
+        public Button selectContextButton;
+        public TMP_Text selectContextButtonText;
+        private patch_Context effectContext;
+    }
+    public class patch_ResearchScreenController : ResearchScreenController //This controls the context, needs to be updated to include mine.
+    {
+        private void UpdateEffectsBreakdownScreen()
+        {
+            List<patch_Context> list = new List<patch_Context>();
+            foreach (object obj in Enum.GetValues(typeof(patch_Context)))
+            {
+                Context context = (Context)obj;
+                if (TIEffectsState.GetFactionEffectsForContext(context, base.activePlayer).Any((TIEffectTemplate x) => x.description(base.activePlayer, null) != string.Empty) && ResearchScreenController.EffectContextToString(context) != string.Empty)
+                {
+                    list.Add((patch_Context)context);
+                }
+            }
+            effectsContextList.SetListSize<EffectContextListItemController>(list.Count);
+            int k = 0;
+            foreach (EffectContextListItemController listItem in effectsContextList)
+            {
+                listItem.SetListItem(list[k++], this);
+            }
+            if (this.selectedContext == patch_Context.None)
+            {
+                this.selectedContextNameText.SetText(string.Empty);
+                this.primarySelectedEffectListingText.SetText(string.Empty);
+            }
+        }
+        private patch_Context selectedContext;
+    }
+
+
+
+
+
+
+
+
+
     public class patch_TIGlobalResearchState : TIGlobalResearchState
     {
         public new TIFactionState Leader(int slot)
@@ -1198,7 +751,7 @@ public patch_TIResourcesCost GetBoostSubstitutedCost(TIFactionState faction, TIG
             }
         }
     }
-}
+    }
 
 
     [MonoModPatch("PavonisInteractive.TerraInvicta.ResourceCostBuilder")]
@@ -1376,7 +929,8 @@ public patch_TIResourcesCost GetBoostSubstitutedCost(TIFactionState faction, TIG
 
     public class ResearchPanelController : MonoBehaviour
     {
-        private string TechCategoryTooltip(TIFactionState faction, TIGenericTechTemplate currentGenericTemplate)
+       public static extern string orig_TechCategoryTooltip(TIFactionState faction, TIGenericTechTemplate currentGenericTemplate);
+        public static string TechCategoryTooltip(TIFactionState faction, TIGenericTechTemplate currentGenericTemplate)
         {
 
             if (currentGenericTemplate.techCategory == (TechCategory)patch_TechCategory.MagicScience)
@@ -1429,67 +983,7 @@ public patch_TIResourcesCost GetBoostSubstitutedCost(TIFactionState faction, TIG
             }
             else
                 {
-                float num = faction.SumCategoryModifiers(currentGenericTemplate.techCategory);
-            float num2 = faction.DistributedCategoryModifierValue(currentGenericTemplate.techCategory);
-            string text = Loc.T("UI.Science.Panel.PositiveBonus", new object[]
-            {
-                num2.ToPercent("P0")
-            });
-            StringBuilder stringBuilder = new StringBuilder(Loc.T("UI.Science.Panel.TechCategoryTooltip_Bonus", new object[]
-            {
-                text,
-                currentGenericTemplate.categoryString
-            })).AppendLine();
-            float num3 = faction.HabsMultiplier(currentGenericTemplate.techCategory);
-            float num4 = faction.OrgsMultiplier(currentGenericTemplate.techCategory);
-            float num5 = faction.TraitsMultiplier(currentGenericTemplate.techCategory);
-            float num6 = faction.FleetsModifier(currentGenericTemplate.techCategory);
-            float num7 = faction.InvestigationsModifier(currentGenericTemplate.techCategory);
-            if (num5 > 0f)
-            {
-                stringBuilder.AppendLine(Loc.T("UI.Science.Panel.Councilors", new object[]
-                {
-                    num5.ToPercent("P0")
-                }));
-            }
-            if (num4 > 0f)
-            {
-                stringBuilder.AppendLine(Loc.T("UI.Science.Panel.Orgs", new object[]
-                {
-                    num4.ToPercent("P0")
-                }));
-            }
-            if (num3 > 0f)
-            {
-                stringBuilder.AppendLine(Loc.T("UI.Science.Panel.Habs", new object[]
-                {
-                    num3.ToPercent("P0")
-                }));
-            }
-            if (num6 > 0f)
-            {
-                stringBuilder.AppendLine(Loc.T("UI.Science.Panel.Fleets", new object[]
-                {
-                    num6.ToPercent("P0")
-                }));
-            }
-            if (num7 > 0f)
-            {
-                stringBuilder.AppendLine(Loc.T("UI.Science.Panel.Investigations", new object[]
-                {
-                    num7.ToPercent("P0")
-                }));
-            }
-            stringBuilder.AppendLine(Loc.T("UI.Science.Panel.DiminishingReturns"));
-            if (num2 != num)
-            {
-                stringBuilder.AppendLine().AppendLine(Loc.T("UI.Science.Panel.BonusDistribution", new object[]
-                {
-                    num.ToPercent("P0"),
-                    num2.ToPercent("P0")
-                }));
-            }
-            return stringBuilder.ToString();
+                return orig_TechCategoryTooltip( faction,  currentGenericTemplate);
         }
         }
     }

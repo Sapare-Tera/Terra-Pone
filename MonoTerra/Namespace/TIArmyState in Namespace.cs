@@ -24,6 +24,251 @@ namespace PavonisInteractive.TerraInvicta
                 return 0.002f;
             }
         }
+        private TIArmyState lastEnemyArmy;
+        public void FireAtEnemyArmy(TIArmyState defendingArmy)
+        {
+            if (this.atSea)
+            {
+                return;
+            }
+            this.lastEnemyArmy = defendingArmy;
+            float attackValue = this.GetAttackValue();
+            float enemyDefendValue = this.GetEnemyDefendValue(defendingArmy);
+            float combatSuccessChance = this.GetCombatSuccessChance(attackValue, enemyDefendValue);
+            int num = this.currentRegion.NumArmiesPresent(true, false, true, true);
+            float num2 = 1f;
+            if (!this.AlienMegafaunaArmy && !defendingArmy.AlienMegafaunaArmy && this.strength == 1f)
+            {
+                if (this.currentRegion.occupations.Count<KeyValuePair<TINationState, float>>() != 0)
+                {
+                    if (!this.currentRegion.occupations.All((KeyValuePair<TINationState, float> x) => x.Value <= 0f))
+                    {
+                        goto IL_A8;
+                    }
+                }
+                num2 = 3f;
+                goto IL_C1;
+            }
+        IL_A8:
+            if (UnityEngine.Random.value < 0.01f * (float)num * (float)num)
+            {
+                num2 = 3f;
+            }
+        IL_C1:
+            defendingArmy.currentRegion.ApplyDamageToRegion((10f - attackValue) * this.regionDamageScaling * num2, this.faction, this.homeNation, false, false, false, false);
+            if (UnityEngine.Random.value < combatSuccessChance)
+            {
+                if (!this.AlienMegafaunaArmy && defendingArmy.AlienMegafaunaArmy && UnityEngine.Random.value < TIEffectsState.SumEffectsModifiers(Context.MegafaunaMastery, this.faction, 0f))
+                {
+                    defendingArmy.AssignToFaction(this.faction, true);
+                    return;
+                }
+                float num3 = attackValue * 0.001f * num2 * (0.8f + UnityEngine.Random.Range(0f, 0.4f));
+                num3 += TIEffectsState.SumEffectsModifiers(Context.ArmyDamageBonustoAllArmies, this.faction, num3);
+                switch (defendingArmy.armyType)
+                {
+                    case ArmyType.Human:
+                        num3 += TIEffectsState.SumEffectsModifiers(Context.ArmyDamageBonustoHumanArmy, this.faction, num3);
+                        break;
+                    case ArmyType.AlienMegafauna:
+                        num3 += TIEffectsState.SumEffectsModifiers(Context.ArmyDamageBonustoMegafauna, this.faction, num3);
+                        break;
+                    case ArmyType.AlienInvader:
+                        num3 += TIEffectsState.SumEffectsModifiers(Context.ArmyDamageBonustoInvaderArmy, this.faction, num3);
+                        num3 *= (1 + (TIGlobalValuesState.GlobalValues.earthAtmosphericCO2_ppm/100) );
+                        break;
+                }
+                defendingArmy.TakeDamage(num3, this.faction, this.homeNation);
+            }
+        }
+
+        // Token: 0x06003323 RID: 13091 RVA: 0x0011AA18 File Offset: 0x00118C18
+        public static float LocalForcesAdjacentRegionsBonus(TIRegionState currentRegion)
+        {
+            float num = 0f;
+            IEnumerable<TIRegionState> enumerable = from x in currentRegion.AdjacentRegions(false)
+                                                    where x.nation == currentRegion.nation
+                                                    select x;
+            float num2 = (float)enumerable.Count<TIRegionState>();
+            if (num2 > 0f)
+            {
+                foreach (TIRegionState tiregionState in enumerable)
+                {
+                    if (tiregionState.occupations.Count != 0)
+                    {
+                        if (!tiregionState.occupations.All((KeyValuePair<TINationState, float> x) => x.Value <= 0f))
+                        {
+                            continue;
+                        }
+                    }
+                    if (tiregionState.NumArmiesPresent(false, false, true, false) == 0)
+                    {
+                        num += 1f;
+                    }
+                }
+                return num / num2 * currentRegion.nation.militaryTechLevel * TemplateManager.global.adjacentFriendlyForcesRegionMiltechMultiplier * (1f + currentRegion.nation.unrest * TemplateManager.global.defenseUnrestMultiplier);
+            }
+            return 0f;
+        }
+        public bool TakeDamage(float amount, TIFactionState attacker, TINationState attackingNation)
+        {
+            if (this.strength <= 0f)
+            {
+                return true;
+            }
+            if (!this.AlienRegularArmy)
+            {
+                patch_TIGlobalValuesState.GlobalValues.AddtoCasualties(amount / 200, true);
+            }
+            this.strength -= amount;
+            this.strength = Mathf.Clamp(this.strength, 0f, 1f);
+            if (amount > 0f)
+            {
+                GameControl.eventManager.TriggerEvent(new ArmyTakesDamage(this), this.armyDamageEventName, new object[]
+                {
+                    this,
+                    this.currentRegion
+                });
+                if (attackingNation != null)
+                {
+                    foreach (TIWarState tiwarState in from x in this.homeNation.currentWarStates
+                                                      where x.allBelligerents.Contains(attackingNation)
+                                                      select x)
+                    {
+                        tiwarState.FightingOccurs();
+                    }
+                }
+            }
+            if (this.strength <= 0f)
+            {
+                TINotificationQueueState.LogArmyIsDestroyed(this, this.currentRegion, attacker);
+                if (this.faction != null)
+                {
+                    if (!this.faction.armiesLost.ContainsKey(this.armyType))
+                    {
+                        this.faction.armiesLost.Add(this.armyType, 1);
+                    }
+                    else
+                    {
+                        Dictionary<ArmyType, int> armiesLost = this.faction.armiesLost;
+                        ArmyType key = this.armyType;
+                        armiesLost[key]++;
+                    }
+                }
+                if ((this.faction == null || this.faction.IsActiveHumanFaction) && this.homeNation != null)
+                {
+                    this.homeNation.AddToCohesion(-this.homeNation.democracy / 10f, TINationState.CohesionChangeReason.CohesionReason_ArmyLost);
+                    if (this.faction != null)
+                    {
+                        this.homeNation.PropagandaOnPop(this.faction.ideology, -this.homeNation.democracy);
+                    }
+                }
+                if (attacker != null)
+                {
+                    switch (this.armyType)
+                    {
+                        case ArmyType.Human:
+                            if (this.homeNation.alienNation && this.techLevel >= 6f)
+                            {
+                                attacker.CompleteMilestone(CampaignMilestone.AccessAlienTech);
+                                if (UnityEngine.Random.value < 0.5f)
+                                {
+                                    attacker.CompleteMilestone(CampaignMilestone.AccessSalamanderCorpus);
+                                }
+                                else if (UnityEngine.Random.value < 0.1f)
+                                {
+                                    attacker.CompleteMilestone(CampaignMilestone.AccessLiveSalamander);
+                                }
+                            }
+                            else if (this.currentRegion.nation == this.homeNation)
+                            {
+                                this.homeNation.ModifyAccumulatedInvestmentFractional(PriorityType.Military_BuildArmy, 0.3f + UnityEngine.Random.value * 0.2f, true);
+                                if (this.deploymentType == DeploymentType.Naval)
+                                {
+                                    if (this.homeNation.navalFreedom)
+                                    {
+                                        if (this.currentRegion.onTheWater)
+                                        {
+                                            this.homeNation.ModifyAccumulatedInvestmentFractional(PriorityType.Military_BuildNavy, 0.7f + UnityEngine.Random.value * 0.2f, true);
+                                        }
+                                        else
+                                        {
+                                            this.homeNation.ModifyAccumulatedInvestmentFractional(PriorityType.Military_BuildNavy, 0.9f + UnityEngine.Random.value * 0.2f, true);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        this.homeNation.ModifyAccumulatedInvestmentFractional(PriorityType.Military_BuildNavy, 0.2f + UnityEngine.Random.value * 0.1f, true);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                this.homeNation.ModifyAccumulatedInvestmentFractional(PriorityType.Military_BuildArmy, 0.15f + UnityEngine.Random.value * 0.1f, true);
+                                if (this.deploymentType == DeploymentType.Naval)
+                                {
+                                    if (this.homeNation.navalFreedom)
+                                    {
+                                        if (this.currentRegion.onTheWater)
+                                        {
+                                            this.homeNation.ModifyAccumulatedInvestmentFractional(PriorityType.Military_BuildNavy, 0.6f + UnityEngine.Random.value * 0.2f, true);
+                                        }
+                                        else
+                                        {
+                                            this.homeNation.ModifyAccumulatedInvestmentFractional(PriorityType.Military_BuildNavy, 0.8f + UnityEngine.Random.value * 0.2f, true);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        this.homeNation.ModifyAccumulatedInvestmentFractional(PriorityType.Military_BuildNavy, 0.1f + UnityEngine.Random.value * 0.1f, true);
+                                    }
+                                }
+                            }
+                            break;
+                        case ArmyType.AlienMegafauna:
+                            attacker.CompleteMilestone(CampaignMilestone.AccessAlienMegafauna);
+                            if (attacker.isActivePlayer)
+                            {
+                                attacker.UnlockAchievement("destroyMegafauna");
+                            }
+                            break;
+                        case ArmyType.AlienInvader:
+                            attacker.CompleteMilestone(CampaignMilestone.AccessAlienTech);
+                            attacker.CompleteMilestone(CampaignMilestone.AccessSalamanderCorpus);
+                            attacker.CompleteMilestone(CampaignMilestone.AccessWarDogCorpus);
+                            attacker.CompleteMilestone(CampaignMilestone.AlienArmyDestroyed);
+                            if (UnityEngine.Random.value < 0.4f)
+                            {
+                                attacker.CompleteMilestone(CampaignMilestone.AccessLiveSalamander);
+                            }
+                            if (attacker.isActivePlayer)
+                            {
+                                attacker.UnlockAchievement("destroyAlienArmy");
+                            }
+                            break;
+                    }
+                }
+                if (this.armyType == ArmyType.AlienInvader && GameStateManager.AlienNation().regions.Count == 0)
+                {
+                    if (GameStateManager.AlienFaction().armies.Count((TIArmyState x) => x.armyType == ArmyType.AlienInvader) <= 1)
+                    {
+                        foreach (TIWarState war in this.homeNation.currentWarStates)
+                        {
+                            TINationState.EndFullWar(GameStateManager.AlienFaction(), war, true);
+                        }
+                    }
+                }
+                if (attacker != null)
+                {
+                    attacker.RegisterKill(this, 1);
+                }
+                this.Disband();
+                return true;
+            }
+            this.SetArmyDataDirty();
+            return false;
+        }
+
         public virtual void EngageLocalForcesAndOccupy(bool regionReturnFireOnly = false) //NEEDS TO BE updated for balance(not tested, is base atm)
         {
             if (this.atSea)

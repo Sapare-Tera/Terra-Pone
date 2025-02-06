@@ -105,7 +105,37 @@ public class TIMissionCondition_NotDrained : TIMissionCondition
         return result;
     }
 }
+public class TIMissionCondition_LowEnoughUnity: TIMissionCondition///This is a placeholder test for now, needs more versions/varity and needs to be implemented for missions.
+{
 
+    public override List<string> feedback
+    {
+        get
+        {
+            return new List<string>
+            {
+                "TIMissionCondition_Dry"
+            };
+        }
+    }
+
+    public override string CanTarget(TICouncilorState councilor, TIGameState possibleTarget)
+    {
+        bool flag = !possibleTarget.isCouncilorState || !(possibleTarget != councilor);
+        string result;
+        float test = TIGlobalValuesState.GlobalValues.earthAtmosphericN2O_ppm;
+        if (test <= 75)
+        {
+            result = "_Pass";
+        }
+        else
+        {
+            result = "TIMissionCondition_GenericFail";  
+            }
+
+        return result;
+    }
+}
 public class TIMissionTarget_OwnControlPoint : MissionTarget<TIControlPoint>
 {
     public override TIFactionState GetRelevantFaction(TIGameState target)
@@ -742,3 +772,360 @@ public class TIMissionEffect_Siphon : TIMissionEffect
         }
     }
 }
+public class patch_TIMissionEffect_Assassinate : TIMissionEffect_Assassinate
+{
+    public override void ApplyDelayedEffect(TIMissionState mission, TIGameState target, TIMissionOutcome outcome = TIMissionOutcome.Success, string dataName = "")
+    {
+        TICouncilorState ref_councilor = target.ref_councilor;
+        if (base.MissionSuccess(outcome))
+        {
+            if (ref_councilor.isAlien)
+            {
+                mission.councilor.faction.CompleteMilestone(CampaignMilestone.AccessHydraCorpus);
+                if (mission.councilor.faction.aliensRemoved > 0)
+                {
+                    int num = ref_councilor.orgs.Count((TIOrgState x) => x.templateName == TIGlobalConfig.globalConfig.alienShockTroopOrgDataName);
+                    if (num > 0)
+                    {
+                        if (mission.councilor.faction.MilestoneCompleted(CampaignMilestone.AccessSalamanderCorpus))
+                        {
+                            if (UnityEngine.Random.value < (float)num * 0.1f)
+                            {
+                                mission.councilor.faction.CompleteMilestone(CampaignMilestone.AccessLiveSalamander);
+                            }
+                        }
+                        else if (UnityEngine.Random.value < (float)num * 0.25f)
+                        {
+                            mission.councilor.faction.CompleteMilestone(CampaignMilestone.AccessSalamanderCorpus);
+                        }
+                    }
+                }
+                mission.councilor.faction.aliensRemoved++;
+                mission.councilor.faction.alienInvestigations += 2;
+                if (mission.missionTemplate.hate[(int)outcome] == 0f)
+                {
+                    (from x in GameStateManager.AllHumanFactions()
+                     where x != GameStateManager.AlienProxy() && x != GameStateManager.AlienAppeaser()
+                     select x).ToList<TIFactionState>().ForEach(delegate (TIFactionState x)
+                     {
+                         GameStateManager.AlienFaction().GainFactionHate(x, mission.missionTemplate.hate.Max() / (float)GameStateManager.AllHumanFactions().Length, false);
+                     });
+                }
+                if (mission.councilor.faction.isActivePlayer)
+                {
+                    mission.councilor.faction.UnlockAchievement("killAlien");
+                }
+            }
+            else
+            {
+                TIFactionState faction = mission.councilor.faction;
+                patch_TIGlobalValuesState.GlobalValues.AddN2O_ppm((float)-1, GHGSources.Effect);///JUST FOR THIS
+                patch_TIGlobalValuesState.GlobalValues.AddtoCasualties(1, false);///Someone died
+                if (faction != null && faction.isActivePlayer)
+                {
+                    mission.councilor.faction.UnlockAchievement("killCouncilor");
+                    if (ref_councilor.inSpace)
+                    {
+                        mission.councilor.faction.UnlockAchievement("killCouncilorSpace");
+                    }
+                }
+            }
+            if (mission.councilor.faction != ref_councilor.faction)
+            {
+                ref_councilor.faction.AddSuspicionForMajorReversal(25f, ref_councilor);
+                TINotificationQueueState.LogMyCouncilorAssassinated(ref_councilor, mission.councilor, mission.missionTemplate.hate[(int)outcome]);
+            }
+            if (!mission.councilor.assassinations.ContainsKey(ref_councilor.faction))
+            {
+                mission.councilor.assassinations.Add(ref_councilor.faction, 0);
+            }
+            Dictionary<TIFactionState, int> dictionary = mission.councilor.assassinations;
+            TIFactionState faction2 = ref_councilor.faction;
+            dictionary[faction2]++;
+            if (!mission.councilor.faction.factionAssassinations.ContainsKey(ref_councilor.faction))
+            {
+                mission.councilor.faction.factionAssassinations.Add(ref_councilor.faction, 0);
+            }
+            dictionary = mission.councilor.faction.factionAssassinations;
+            faction2 = ref_councilor.faction;
+            dictionary[faction2]++;
+            ref_councilor.KillCouncilor(true, (outcome == TIMissionOutcome.Success) ? mission.councilor.faction : null);
+            return;
+        }
+        if (outcome == TIMissionOutcome.CriticalFailure && !ref_councilor.detained && mission.councilor.GetProtectors().Count == 0)
+        {
+            if (ref_councilor.traits.Any((TITraitTemplate x) => x.specialTraitRule == SpecialTraitRule.HardTarget))
+            {
+                mission.councilor.KillCouncilorOnMission(mission);
+                patch_TIGlobalValuesState.GlobalValues.AddtoCasualties(1, false);///Someone died
+                return;
+            }
+        }
+        if (mission.councilor.faction == ref_councilor.faction)
+        {
+            IEnumerable<TIFactionState> enumerable = from x in GameStateManager.AllHumanFactions().Except(new List<TIFactionState>
+            {
+                ref_councilor.faction
+            })
+                                                     where x.turnedCouncilors.Count < 2
+                                                     select x;
+            if (enumerable.Count<TIFactionState>() > 0)
+            {
+                TIFactionState tifactionState = enumerable.SelectRandomItem<TIFactionState>();
+                ref_councilor.TurnCouncilor(tifactionState);
+                mission.councilor.faction.DismissCouncilor(ref_councilor, tifactionState);
+                ref_councilor.AddTrait("Vengeful");
+                return;
+            }
+            List<TransferOrgToFactionPoolAction> list = new List<TransferOrgToFactionPoolAction>();
+            foreach (TIOrgState org in ref_councilor.orgs)
+            {
+                list.Add(new TransferOrgToFactionPoolAction(org, ref_councilor));
+            }
+            foreach (TransferOrgToFactionPoolAction action in list)
+            {
+                mission.councilor.faction.playerControl.StartAction(action);
+            }
+            mission.councilor.faction.DismissCouncilor(ref_councilor, mission.councilor.faction);
+            mission.councilor.faction.availableCouncilors.Remove(ref_councilor);
+        }
+    }
+}
+
+public class patch_TIMissionEffect_Coup : TIMissionEffect_Coup
+{
+    public override string ApplyEffect(TIMissionState mission, TIGameState target, TIMissionOutcome outcome = TIMissionOutcome.Success)
+    {
+        patch_TIGlobalValuesState.GlobalValues.AddN2O_ppm((float)-1, GHGSources.Effect);///JUST FOR THIS
+        TICouncilorState councilor = mission.councilor;
+        TINationState ref_nation = target.ref_nation;
+        if (ref_nation == null)
+        {
+            return string.Empty;
+        }
+        if (base.MissionSuccess(outcome))
+        {
+            int strength = (outcome == TIMissionOutcome.CriticalSuccess) ? 2 : 1;
+            ref_nation.Coup(councilor, strength);
+            return strength.ToString();
+        }
+        if (outcome != TIMissionOutcome.CriticalFailure)
+        {
+            return string.Empty;
+        }
+        TIFactionState tifactionState = ref_nation.WeightedRandomFactionByControlPoints();
+        if (tifactionState == mission.councilor.faction)
+        {
+            return string.Empty;
+        }
+        if (tifactionState == null || councilor.isAlien)
+        {
+            float inputFloat = ref_nation.PropagandaOnPop(councilor.faction.ideology, -5f);
+            return Loc.T(new StringBuilder(base.GetType().Name).Append(".Special1").ToString(), new object[]
+            {
+                inputFloat.ToPercent("P0")
+            });
+        }
+        councilor.DetainCouncilor(tifactionState, 2f, 1f, true);
+        return Loc.T(new StringBuilder(base.GetType().Name).Append(".Special2").ToString(), new object[]
+        {
+            tifactionState.displayNameWithColor
+        });
+    }
+}
+
+public class patch_TIMissionEffect_DestroyHabModule : TIMissionEffect_DestroyHabModule
+{
+    public override string ApplyEffect(TIMissionState mission, TIGameState target, TIMissionOutcome outcome = TIMissionOutcome.Success)
+    {
+        patch_TIGlobalValuesState.GlobalValues.AddN2O_ppm((float)-0.5, GHGSources.Effect);///JUST FOR THIS
+        TIHabModuleState tihabModuleState = target as TIHabModuleState;
+        string displayName = tihabModuleState.displayName;
+        int Crew = tihabModuleState.crew;
+        patch_TIGlobalValuesState.GlobalValues.AddtoCasualties(Crew, false);///The Crew is dead
+        switch (outcome)
+        {
+            case TIMissionOutcome.CriticalFailure:
+                mission.councilor.DetainCouncilor(tihabModuleState.ref_faction, 3f, 2f, true);
+                break;
+            case TIMissionOutcome.Success:
+            case TIMissionOutcome.CriticalSuccess:
+                tihabModuleState.hab.DestroyModule(mission.ref_faction, tihabModuleState, false, true, true, mission.missionTemplate.hate[(int)outcome], false, true);
+                break;
+        }
+        return displayName;
+    }
+}
+public class patch_TIMissionEffect_SabotageProject : TIMissionEffect_SabotageProject
+{
+    public override string ApplyEffect(TIMissionState mission, TIGameState target, TIMissionOutcome outcome = TIMissionOutcome.Success)
+    {
+        patch_TIGlobalValuesState.GlobalValues.AddN2O_ppm((float)-0.25, GHGSources.Effect);///JUST FOR THIS
+        if (base.MissionSuccess(outcome))
+        {
+            patch_TIGlobalValuesState.GlobalValues.AddtoCasualties(25, false);///Casualties is dead
+            TIPromptQueueState.AddPromptStatic(mission.councilor.faction, mission.councilor, mission, "PromptSabotageProject", 0);
+            if (outcome == TIMissionOutcome.CriticalSuccess)
+            {
+                patch_TIGlobalValuesState.GlobalValues.AddtoCasualties(50, false);///Casualties is dead
+                float num = target.ref_faction.TransferResourceToFaction(50f, FactionResource.Research, mission.councilor.faction);
+                return new StringBuilder(TemplateManager.global.researchInlineSpritePath).Append(num.ToString("N0")).ToString();
+            }
+        }
+        else if (outcome == TIMissionOutcome.CriticalFailure)
+        {
+            TIFactionState ref_faction = target.ref_faction;
+            mission.councilor.DetainCouncilor(ref_faction, 2f, 1f, true);
+            return Loc.T(new StringBuilder(base.GetType().Name).Append(".Special").ToString(), new object[]
+            {
+                ref_faction.displayNameCapitalized
+            });
+        }
+        return string.Empty;
+    }
+}
+public class patch_TIMissionEffect_TurnCouncilor : TIMissionEffect_TurnCouncilor
+{
+    public override string ApplyEffect(TIMissionState mission, TIGameState target, TIMissionOutcome outcome = TIMissionOutcome.Success)
+    {
+        patch_TIGlobalValuesState.GlobalValues.AddN2O_ppm((float)-1, GHGSources.Effect);///JUST FOR THIS
+        if (outcome == TIMissionOutcome.CriticalSuccess)
+        {
+            float amountToAdd = target.ref_faction.GetDailyIncome(FactionResource.Research, false, false) * 30f;
+            mission.councilor.faction.AddToCurrentResource(amountToAdd, FactionResource.Research, false);
+            return amountToAdd.ToString("N0");
+        }
+        return string.Empty;
+    }
+}
+
+    public class patch_TIMissionEffect_DamageSpaceFacilities : TIMissionEffect_DamageSpaceFacilities
+{
+        public override string ApplyEffect(TIMissionState mission, TIGameState target, TIMissionOutcome outcome = TIMissionOutcome.Success)
+        {
+        patch_TIGlobalValuesState.GlobalValues.AddN2O_ppm((float)-0.5, GHGSources.Effect);///JUST FOR THIS
+        if (target.isRegionSpaceFacility)
+            {
+                TICouncilorState councilor = mission.councilor;
+                TIRegionSpaceFacilityState ref_regionSpaceFacility = target.ref_regionSpaceFacility;
+                TIRegionState region = ref_regionSpaceFacility.region;
+                switch (ref_regionSpaceFacility.spaceFacilityType)
+                {
+                    case SpaceFacilityType.launchFacility:
+                        switch (outcome)
+                        {
+                            case TIMissionOutcome.CriticalFailure:
+                                {
+                                    TIFactionState tifactionState = region.nation.WeightedRandomFactionByControlPoints();
+                                    if (tifactionState == mission.councilor.faction)
+                                    {
+                                        return string.Empty;
+                                    }
+                                    if (tifactionState == null)
+                                    {
+                                        float inputFloat = region.nation.PropagandaOnPop(councilor.faction.ideology, -5f);
+                                        return Loc.T(new StringBuilder(base.GetType().Name).Append(".Special1").ToString(), new object[]
+                                        {
+                            inputFloat.ToPercent("P0")
+                                        });
+                                    }
+                                    councilor.DetainCouncilor(tifactionState, 2f, 1f, true);
+                                    return Loc.T(new StringBuilder(base.GetType().Name).Append(".Special2").ToString(), new object[]
+                                    {
+                        tifactionState.displayName
+                                    });
+                                }
+                            case TIMissionOutcome.Success:
+                                {
+                                    float num = Mathf.Clamp(10f - (region.boostPerYear_dekatons - 3f) * 1.5f, 0.2f, 1f);
+                                    float num2 = Mathf.Min(1f, region.boostPerYear_dekatons * num);
+                                    region.ChangeSpaceFacilityValue(SpaceFacilityType.launchFacility, -num2, false, true);
+                                    TINotificationQueueState.LogSpaceFacilityBombed(ref_regionSpaceFacility, mission.councilor.faction, TIUtilities.FormatBigOrSmallNumber(region.boostPerYear_dekatons, 1, 7, 0, false, false), mission.missionTemplate.hate[(int)outcome]);
+                                    return num2.ToString();
+                                }
+                            case TIMissionOutcome.CriticalSuccess:
+                                {
+                                    float num3 = Mathf.Clamp(10f - (region.boostPerYear_dekatons - 3f) * 0.5f, 0.5f, 1f);
+                                    float num4 = Mathf.Min(2f, region.boostPerYear_dekatons * num3);
+                                    region.ChangeSpaceFacilityValue(SpaceFacilityType.launchFacility, -num4, false, true);
+                                    TINotificationQueueState.LogSpaceFacilityBombed(ref_regionSpaceFacility, mission.councilor.faction, TIUtilities.FormatBigOrSmallNumber(region.boostPerYear_dekatons, 1, 7, 0, false, false), mission.missionTemplate.hate[(int)outcome]);
+                                    return num4.ToString();
+                                }
+                        }
+                        break;
+                    case SpaceFacilityType.missionControlFacility:
+                        switch (outcome)
+                        {
+                            case TIMissionOutcome.CriticalFailure:
+                                {
+                                    TIFactionState tifactionState2 = region.nation.WeightedRandomFactionByControlPoints();
+                                    if (tifactionState2 == mission.councilor.faction)
+                                    {
+                                        return string.Empty;
+                                    }
+                                    if (tifactionState2 == null)
+                                    {
+                                        float inputFloat2 = region.nation.PropagandaOnPop(councilor.faction.ideology, -5f);
+                                        return Loc.T(new StringBuilder(base.GetType().Name).Append(".Special1").ToString(), new object[]
+                                        {
+                            inputFloat2.ToPercent("P0")
+                                        });
+                                    }
+                                    councilor.DetainCouncilor(tifactionState2, 2f, 1f, true);
+                                    return Loc.T(new StringBuilder(base.GetType().Name).Append(".Special2").ToString(), new object[]
+                                    {
+                        tifactionState2.displayName
+                                    });
+                                }
+                            case TIMissionOutcome.Success:
+                                {
+                                    int num5 = 1;
+                                    region.ChangeSpaceFacilityValue(SpaceFacilityType.missionControlFacility, (float)(-(float)num5), false, true);
+                                    TINotificationQueueState.LogSpaceFacilityBombed(ref_regionSpaceFacility, mission.councilor.faction, region.missionControl.ToString("N0"), mission.missionTemplate.hate[(int)outcome]);
+                                    return num5.ToString();
+                                }
+                            case TIMissionOutcome.CriticalSuccess:
+                                {
+                                    int num6 = 2;
+                                    region.ChangeSpaceFacilityValue(SpaceFacilityType.missionControlFacility, (float)(-(float)num6), false, true);
+                                    TINotificationQueueState.LogSpaceFacilityBombed(ref_regionSpaceFacility, mission.councilor.faction, region.missionControl.ToString("N0"), mission.missionTemplate.hate[(int)outcome]);
+                                    return num6.ToString();
+                                }
+                        }
+                        break;
+                    case SpaceFacilityType.spaceDefenseFacility:
+                        if (outcome != TIMissionOutcome.CriticalFailure)
+                        {
+                            if (outcome - TIMissionOutcome.Success <= 1)
+                            {
+                                region.ChangeSpaceFacilityValue(SpaceFacilityType.spaceDefenseFacility, 0f, false, true);
+                                TINotificationQueueState.LogSpaceFacilityBombed(ref_regionSpaceFacility, mission.councilor.faction, string.Empty, mission.missionTemplate.hate[(int)outcome]);
+                            }
+                        }
+                        else
+                        {
+                            TIFactionState tifactionState3 = region.nation.WeightedRandomFactionByControlPoints();
+                            if (tifactionState3 == mission.councilor.faction)
+                            {
+                                return string.Empty;
+                            }
+                            if (tifactionState3 == null)
+                            {
+                                float inputFloat3 = region.nation.PropagandaOnPop(councilor.faction.ideology, -5f);
+                                return Loc.T(new StringBuilder(base.GetType().Name).Append(".Special1").ToString(), new object[]
+                                {
+                            inputFloat3.ToPercent("P0")
+                                });
+                            }
+                            councilor.DetainCouncilor(tifactionState3, 2f, 1f, true);
+                            return Loc.T(new StringBuilder(base.GetType().Name).Append(".Special2").ToString(), new object[]
+                            {
+                        tifactionState3.displayName
+                            });
+                        }
+                        break;
+                }
+            }
+            return string.Empty;
+        }
+    }
