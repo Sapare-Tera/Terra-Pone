@@ -97,11 +97,15 @@ namespace PavonisInteractive.TerraInvicta
                 this.pastEarthAtmosphericCH4_ppm[this.gameTime.currentTime.month - 1] = this.earthAtmosphericCH4_ppm;
                 this.pastEarthAtmosphericN2O_ppm[this.gameTime.currentTime.month - 1] = this.earthAtmosphericN2O_ppm;
                 float anomaly_C = this.temperatureAnomaly_C;
-                if (anomaly_C > 0f)
+                if (anomaly_C > 0f && globalSeaLevelAnomaly_cm <= 100)
                 {
                     this.AddToSeaLevel_cm(0.05f * anomaly_C);
                 }
-                GameStateManager.AllExtantNations().ToList<TINationState>().ForEach(delegate (TINationState x)
+                 if (anomaly_C < 0f && globalSeaLevelAnomaly_cm >= 0)
+            {
+                this.RemoveToSeaLevel_cm(0.05f * anomaly_C);
+            }
+            GameStateManager.AllExtantNations().ToList<TINationState>().ForEach(delegate (TINationState x)
                 {
                     x.ProcessMonthlyGHGsFromEconomy();
                 });
@@ -138,8 +142,7 @@ namespace PavonisInteractive.TerraInvicta
                 n2OSourcesRecord_ppm[source] += (double)amount;
             }
 
-
-            public float temperatureAnomalyCO2_C
+        public float temperatureAnomalyCO2_C
             {
                 get
                 {
@@ -167,7 +170,7 @@ namespace PavonisInteractive.TerraInvicta
             {
                 get
                 {
-                return ((this.earthAtmosphericCO2_ppm + this.earthAtmosphericCH4_ppm + this.earthAtmosphericN2O_ppm - 200f)); //+ this.temperatureAnomalyStratosphericAerosols_C; Is Deathcounter
+                return ((this.earthAtmosphericCO2_ppm + this.earthAtmosphericCH4_ppm + this.earthAtmosphericN2O_ppm - 200f)/10); //+ this.temperatureAnomalyStratosphericAerosols_C; Is Deathcounter
                 }
             }
 
@@ -179,22 +182,43 @@ namespace PavonisInteractive.TerraInvicta
             public const float xenoformingFullCoverageCO2AnnualConsumption_ppm = 3.45f;
 
             public float globalSeaLevelAnomaly_cm { get; private set; }
-
-            public void AddToSeaLevel_cm(float amount)
+        public void AddToSeaLevel_cm(float amount)
+        {
+            this.globalSeaLevelAnomaly_cm += amount;
+            globalSeaLevelAnomaly_cm = Mathf.Min(globalSeaLevelAnomaly_cm, 100f);
+            if (this.globalSeaLevelAnomaly_cm >= 85 && !this.globalSeaLevelRise1Triggered)
             {
-                this.globalSeaLevelAnomaly_cm -= amount;
-                if (this.globalSeaLevelAnomaly_cm <= 85f && !this.globalSeaLevelRise1Triggered)
-                {
-                    this.globalSeaLevelRise1Triggered = true;
-                    GameStateManager.Earth().SetModelResource();
-                }
-                if (this.globalSeaLevelAnomaly_cm <= 50 && !this.globalSeaLevelRise2Triggered)
-                {
-                    this.globalSeaLevelRise2Triggered = true;
-                    GameStateManager.Earth().SetModelResource();
-                }
+                this.globalSeaLevelRise1Triggered = true;
+                GameStateManager.Earth().SetModelResource();
             }
-            public void AddSpoilsPriorityEnvEffect(TINationState nation, float scaling)
+            if (this.globalSeaLevelAnomaly_cm >= 100 && !this.globalSeaLevelRise2Triggered)
+            {
+                this.globalSeaLevelRise2Triggered = true;
+                GameStateManager.Earth().SetModelResource();
+                TIFactionState activePlayer = GameControl.control.activePlayer;
+                if (activePlayer == null)
+                {
+                    return;
+                }
+                activePlayer.UnlockAchievement("seaLevelRise");
+            }
+        }
+        public void RemoveToSeaLevel_cm(float amount)
+        {
+            this.globalSeaLevelAnomaly_cm += amount;
+            globalSeaLevelAnomaly_cm = Mathf.Max(globalSeaLevelAnomaly_cm, 0f);
+            if (this.globalSeaLevelAnomaly_cm <= 85f && !this.globalSeaLevelRise1Triggered)
+            {
+                this.globalSeaLevelRise1Triggered = true;
+                GameStateManager.Earth().SetModelResource();
+            }
+            if (this.globalSeaLevelAnomaly_cm <= 50 && !this.globalSeaLevelRise2Triggered)
+            {
+                this.globalSeaLevelRise2Triggered = true;
+                GameStateManager.Earth().SetModelResource();
+            }
+        }
+        public void AddSpoilsPriorityEnvEffect(TINationState nation, float scaling)
             {
                 float num = nation.economyScore / 100f;
                 this.AddCO2_ppm(scaling * num * (TemplateManager.global.SpoCO2_ppm + TemplateManager.global.SpoResCO2_ppm * (float)nation.miningRegions), GHGSources.SpoilsPriority);

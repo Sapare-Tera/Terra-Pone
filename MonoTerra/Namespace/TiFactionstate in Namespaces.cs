@@ -66,6 +66,16 @@ namespace PavonisInteractive.TerraInvicta
 
     public class patch_TIFactionState : TIFactionState
     {
+        public TIDateTime CouncilTimer = new TIDateTime();
+
+        public int CouncilMember = (int)patch_Context.CouncilMember;
+
+        public int InternationalTreatyType = (int)patch_Context.InternationalTreatyType;
+        public TIDateTime SetCouncilTimer(TIDateTime Now)
+        {
+            this.CouncilTimer = Now;
+            return CouncilTimer;
+        }
         public static int JealousyAndDeescalation(TIFactionState faction, TIFactionState enemyFaction, bool generalDeescalation, bool processPeriodicChange)
         {
             if (faction.permanentAlly(enemyFaction))
@@ -96,9 +106,10 @@ namespace PavonisInteractive.TerraInvicta
             }
 
             float unitydrift = -5 + (TIGlobalValuesState.GlobalValues.earthAtmosphericN2O_ppm / 10);
-
-            faction.GainFactionHate(enemyFaction, unitydrift/5, false);//This Should drift hate based on unity.
-
+            if (processPeriodicChange)
+            {
+                faction.GainFactionHate(enemyFaction, unitydrift / 5, false);//This Should drift hate based on unity.
+            }
 
             if (faction.IsAlienFaction && enemyFaction.isAlienAppeaser && enemyFaction.unlockedVictoryObjective)
             {

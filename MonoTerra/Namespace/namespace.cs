@@ -234,7 +234,7 @@ namespace PavonisInteractive.TerraInvicta
             maxFractionCanSpend = Mathf.Clamp(maxFractionCanSpend, 0f, 1f);
             foreach (ResourceValue resourceValue in this.resourceCosts)
             {
-                float WarValue = resourceValue.value * TIGlobalValuesState.GlobalValues.earthAtmosphericCH4_ppm / 100;
+                float WarValue = resourceValue.value * (1 - (TIGlobalValuesState.GlobalValues.earthAtmosphericCH4_ppm / 100));
                 if (WarValue > 0f)
                 {
                     if (resourcesToPreserve != null && resourcesToPreserve.Contains(resourceValue.resource))
@@ -263,7 +263,7 @@ namespace PavonisInteractive.TerraInvicta
             {
                 foreach (ResourceValue resourceValue in this.resourceCosts)
                 {
-                    float WarValue = resourceValue.value * TIGlobalValuesState.GlobalValues.earthAtmosphericCH4_ppm / 100;
+                    float WarValue = resourceValue.value * (1 - (TIGlobalValuesState.GlobalValues.earthAtmosphericCH4_ppm / 100));
                     faction.SubtractFromCurrentResource(WarValue, resourceValue.resource, true);
                     if (resourceValue.resource == FactionResource.Boost && resourceValue.value > 0f)
                     {
@@ -604,58 +604,14 @@ namespace PavonisInteractive.TerraInvicta
         };
     }
 
-    [MonoModIgnore] class EffectContextListItemController : MonoBehaviour {
-        public void SetListItem(patch_Context context, ResearchScreenController controller)
-        {
-            this.effectContext = context;
-            this.controller = controller;
-            this.selectContextButtonText.SetText(ResearchScreenController.EffectContextToString((Context)this.effectContext));
-        }
-        public void OnContextButtonPressed()
-        {
-            this.controller.OnEffectContextButtonPressed((Context)this.effectContext);
-        }
-        private ResearchScreenController controller;
-        public Button selectContextButton;
-        public TMP_Text selectContextButtonText;
-        private patch_Context effectContext;
-    }
-    public class patch_ResearchScreenController : ResearchScreenController //This controls the context, needs to be updated to include mine.
+    public class TIGlobalCondition_fEarthAtmosphericN2O_ppm : TIGlobalCondition
     {
-        private void UpdateEffectsBreakdownScreen()
+        
+        public override bool PassesCondition(TIGameState state)
         {
-            List<patch_Context> list = new List<patch_Context>();
-            foreach (object obj in Enum.GetValues(typeof(patch_Context)))
-            {
-                Context context = (Context)obj;
-                if (TIEffectsState.GetFactionEffectsForContext(context, base.activePlayer).Any((TIEffectTemplate x) => x.description(base.activePlayer, null) != string.Empty) && ResearchScreenController.EffectContextToString(context) != string.Empty)
-                {
-                    list.Add((patch_Context)context);
-                }
-            }
-            effectsContextList.SetListSize<EffectContextListItemController>(list.Count);
-            int k = 0;
-            foreach (EffectContextListItemController listItem in effectsContextList)
-            {
-                listItem.SetListItem(list[k++], this);
-            }
-            if (this.selectedContext == patch_Context.None)
-            {
-                this.selectedContextNameText.SetText(string.Empty);
-                this.primarySelectedEffectListingText.SetText(string.Empty);
-            }
+            return TICondition.PassesComparison(this.sign, TIGlobalValuesState.GlobalValues.earthAtmosphericN2O_ppm, TIUtilities.GetFloatValue(this.strValue));
         }
-        private patch_Context selectedContext;
     }
-
-
-
-
-
-
-
-
-
     public class patch_TIGlobalResearchState : TIGlobalResearchState
     {
         public new TIFactionState Leader(int slot)
@@ -923,68 +879,6 @@ namespace PavonisInteractive.TerraInvicta
                 dictionary.Add((FactionResource)patch_FactionResource.Magic, this.magic * multiplier);
             }
             return dictionary;
-        }
-    }
-
-
-    public class ResearchPanelController : MonoBehaviour
-    {
-       public static extern string orig_TechCategoryTooltip(TIFactionState faction, TIGenericTechTemplate currentGenericTemplate);
-        public static string TechCategoryTooltip(TIFactionState faction, TIGenericTechTemplate currentGenericTemplate)
-        {
-
-            if (currentGenericTemplate.techCategory == (TechCategory)patch_TechCategory.MagicScience)
-                {
-                float num = faction.SumCategoryModifiers(currentGenericTemplate.techCategory);
-                float num2 = faction.DistributedCategoryModifierValue(currentGenericTemplate.techCategory);
-                string text = Loc.T("UI.Science.Panel.PositiveBonus", new object[]
-                {
-                num2.ToPercent("P0")
-                });
-                StringBuilder stringBuilder = new StringBuilder(Loc.T("UI.Science.Panel.TechCategoryTooltip_Bonus", new object[]
-                {
-                text,
-                currentGenericTemplate.categoryString
-                })).AppendLine();
-                float num3 = 0;
-                float num4 = faction.FleetsModifier(TechCategory.LifeScience);
-                float num5 = faction.FleetsModifier(TechCategory.Xenology);
-                if (num5 > 0f)
-                {
-                    stringBuilder.AppendLine(Loc.T("UI.Science.Panel.Councilors", new object[]
-                    {
-                    num5.ToPercent("P0")
-                    }));
-                }
-                if (num4 > 0f)
-                {
-                    stringBuilder.AppendLine(Loc.T("UI.Science.Panel.Orgs", new object[]
-                    {
-                    num4.ToPercent("P0")
-                    }));
-                }
-                if (num3 > 0f)
-                {
-                    stringBuilder.AppendLine(Loc.T("UI.Science.Panel.Habs", new object[]
-                    {
-                    num3.ToPercent("P0")
-                    }));
-                }
-                stringBuilder.AppendLine(Loc.T("UI.Science.Panel.DiminishingReturns"));
-                if (num2 != num)
-                {
-                    stringBuilder.AppendLine().AppendLine(Loc.T("UI.Science.Panel.BonusDistribution", new object[]
-                    {
-                    num.ToPercent("P0"),
-                    num2.ToPercent("P0")
-                    }));
-                }
-                return stringBuilder.ToString();
-            }
-            else
-                {
-                return orig_TechCategoryTooltip( faction,  currentGenericTemplate);
-        }
         }
     }
   }

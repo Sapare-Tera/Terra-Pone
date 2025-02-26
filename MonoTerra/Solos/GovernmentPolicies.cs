@@ -1,9 +1,14 @@
-﻿using PavonisInteractive.TerraInvicta;
+﻿using HarmonyLib;
+using PavonisInteractive.TerraInvicta;
+using PavonisInteractive.TerraInvicta.Entities;
+using PavonisInteractive.TerraInvicta.Systems;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using static MonoMod.InlineRT.MonoModRule;
 
 public class patch_WarOption : WarOption
 {
@@ -12,6 +17,10 @@ public class patch_WarOption : WarOption
     {
         if (nationState.executiveFaction != null)
         {
+            patch_TIFactionState Faction = (patch_TIFactionState)nationState.executiveFaction;
+            if (Faction.InternationalTreatyType == 1)
+            { return false;
+            }
             return nationState.WarCapable && this.GetPossibleTargets(nationState).Count > 0 && Warcost.CanAffordWarOption(nationState.executiveFaction);
         }
         return nationState.WarCapable && this.GetPossibleTargets(nationState).Count > 0;
@@ -109,13 +118,135 @@ public class patch_WarOption : WarOption
         });;
     }
 }
-//public override string GetDescription()
-//{
-//    return Loc.T(new StringBuilder(base.dataName).Append(".description").ToString(), new object[]
-//    {
-//            TIUtilities.InlineResourceStr(TIFactionState.setPolicyMission.cost.resourceType),
-//            TIFactionState.setPolicyMission.cost.value
-//    });
-//}
+public class patch_JoinFederationOption : JoinFederationOption
+{
+    public static readonly patch_TIResourcesCost Fedcost = new patch_TIResourcesCost(TIFactionState.setPolicyMission.cost.resourceType, 100);
+    public override bool Allowed(TINationState nationState)
+    {
+        return nationState.extant && (!nationState.inFederation || nationState.federation.leadNation == nationState) && !nationState.breakaway && this.GetPossibleTargets(nationState).Count > 0 && Fedcost.CanAffordFederationOption(nationState.executiveFaction);
+    }
 
-//TIFactionState.setPolicyMission.cost.value
+    public override void OnPassage(TINationState enactingNation, TIGameState policyTarget)
+    {
+        TINationState ref_nation = policyTarget.ref_nation;
+        Fedcost.PayCostFederationOption(enactingNation.executiveFaction);
+        patch_TIGlobalValuesState.GlobalValues.ReduceUnity(-5);
+        if (enactingNation.inFederation)
+        {
+            enactingNation.federation.AddNation(enactingNation.executiveFaction, ref_nation, false);
+            return;
+        }
+        if (ref_nation.inFederation)
+        {
+            ref_nation.federation.AddNation(enactingNation.executiveFaction, enactingNation, false);
+            return;
+        }
+        enactingNation.FormFederation(ref_nation);
+    }
+
+    public override string GetDescription()
+    {
+        return Loc.T(new StringBuilder(base.dataName).Append(".description").ToString(), new object[]
+        {
+            TIUtilities.InlineResourceStr(TIFactionState.setPolicyMission.cost.resourceType),
+            ((Fedcost.GetSingleCostValue(FactionResource.Influence) * (1 - (TIGlobalValuesState.GlobalValues.earthAtmosphericCH4_ppm / 100))))
+        }); ;
+    }
+}
+public class CancelOption2 : TIPolicyOption
+{
+    public override PolicyType GetPolicyType()
+    {
+        return (PolicyType)patch_PolicyType.CancelOption2;
+    }
+
+    public override bool Allowed(TINationState nationState)
+    {
+        return true;
+    }
+    public bool Faction = true;
+    public override string GetDescription()
+    {
+        return Loc.T(new StringBuilder(base.dataName).Append(".description").ToString(), new object[]
+        {
+            TIUtilities.InlineResourceStr(TIFactionState.setPolicyMission.cost.resourceType),
+            TIFactionState.setPolicyMission.cost.value
+        });
+    }
+    public override IList<TIGameState> GetPossibleTargets(TINationState policyTarget)
+    {
+        return null;
+    }
+
+    public override void OnPassage(TINationState enactingNation, TIGameState policyTarget)
+    {
+        TIFactionState executiveFaction = enactingNation.executiveFaction;
+        if (executiveFaction == null)
+        {
+            return;
+        }
+        //executiveFaction.AddToCurrentResource(TIFactionState.setPolicyMission.cost.value, TIFactionState.setPolicyMission.cost.resourceType, false);
+        patch_TINationState PatchNation = (patch_TINationState)enactingNation;
+        PatchNation.Harmony = !PatchNation.Harmony;
+    }
+
+    public override bool RequiresTargets()
+    {
+        return false;
+    }
+
+    public override int Importance(TINationState policyNation, TIGameState target)
+    {
+        return -10;
+    }
+}
+
+
+
+public class LeaveCouncil : TIPolicyOption
+{
+    public override PolicyType GetPolicyType()
+    {
+        return (PolicyType)patch_PolicyType.LeaveCouncil;
+    }
+
+    public override bool Allowed(TINationState nationState)
+    {
+        if (nationState.executiveFaction != null)
+        {
+            patch_TIFactionState Faction = (patch_TIFactionState)nationState.executiveFaction;
+            return Faction.CouncilMember > 0 && Faction.CouncilMember < 2;
+        }
+        return false;
+    }
+    public bool Faction = true;
+    public override string GetDescription()
+    {
+        return Loc.T(new StringBuilder(base.dataName).Append(".description").ToString(), new object[]
+        {
+            TIUtilities.InlineResourceStr(TIFactionState.setPolicyMission.cost.resourceType),
+            TIFactionState.setPolicyMission.cost.value
+        });
+    }
+    public override IList<TIGameState> GetPossibleTargets(TINationState policyTarget)
+    {
+        return null;
+    }
+
+    public override void OnPassage(TINationState enactingNation, TIGameState policyTarget)
+    {
+        patch_TIFactionState executiveFaction = (patch_TIFactionState)enactingNation.executiveFaction;
+        TIEffectsState.ProcessInstantEffect(executiveFaction, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.RemoveEffectFromFaction, 0f, 0f, "Effect_CouncilMemberSetter", null, null);
+    }
+
+    public override bool RequiresTargets()
+    {
+        return false;
+    }
+
+    public override int Importance(TINationState policyNation, TIGameState target)
+    {
+        return -10;
+    }
+}
+

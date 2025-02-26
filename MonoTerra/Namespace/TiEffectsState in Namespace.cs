@@ -14,13 +14,21 @@ namespace PavonisInteractive.TerraInvicta
 
     public class patch_TIEffectsState : TIEffectsState
     {
+        //public static List<TIEffectTemplate> GetFactionEffectsForContext(patch_Context context, patch_TIFactionState faction)
+        //{
+        //    patch_TIEffectsState tieffectsState = (patch_TIEffectsState)GameStateManager.Effects();
+        //    if (tieffectsState.factionEffects[faction].ContainsKey(context))
+        //    {
+        //        return tieffectsState.factionEffects[faction][context];
+        //    }
+        //    return new List<TIEffectTemplate>();
+        //}
 
-        private Dictionary<TIFactionState, Dictionary<patch_Context, List<TIEffectTemplate>>> factionEffects;
-
+        //private Dictionary<patch_TIFactionState, Dictionary<patch_Context, List<TIEffectTemplate>>> factionEffects;
 
         public static extern void orig_ProcessInstantEffect(TIFactionState sourceFaction, EffectTargetType effectTargetType, EffectSecondaryStateType secondaryStateType, InstantEffect instantEffect, float value, float randomizer, string strValue, TIGameState inputState = null, TIGameState secondaryinputState = null);
 
-        public static void ProcessInstantEffect(TIFactionState sourceFaction, EffectTargetType effectTargetType, EffectSecondaryStateType secondaryStateType, InstantEffect instantEffect, float value, float randomizer, string strValue, TIGameState inputState = null, TIGameState secondaryinputState = null)
+        public static void ProcessInstantEffect(patch_TIFactionState sourceFaction, EffectTargetType effectTargetType, EffectSecondaryStateType secondaryStateType, InstantEffect instantEffect, float value, float randomizer, string strValue, TIGameState inputState = null, TIGameState secondaryinputState = null)
         {
             orig_ProcessInstantEffect(sourceFaction, effectTargetType, secondaryStateType, instantEffect, value, randomizer, strValue, inputState, secondaryinputState);
             switch (instantEffect)
@@ -51,15 +59,41 @@ namespace PavonisInteractive.TerraInvicta
                     {
                         foreach (TIFactionState tifactionState in GameStateManager.AllFactions())
                         {
-                            if (!tifactionState.player.isAI)
-                            if (sourceFaction.player.isAI && (sourceFaction.ideology.dataName == "destroy" || sourceFaction.ideology.dataName == "cooperate" || sourceFaction.ideology.dataName == "resist"))
+                            if ( sourceFaction.ideology.dataName == "destroy" )
                             {
-                                sourceFaction.AddGoal(new FactionGoal_NonAggressionPact(sourceFaction, 4, tifactionState), HandleDuplicateGoalRule.ResetImportanceIfHigher, null);
+                                if ( tifactionState.ideology.dataName == "cooperate" || tifactionState.ideology.dataName == "resist")
+                                {
+                                    sourceFaction.AddGoal(new FactionGoal_NonAggressionPact(sourceFaction, 4, tifactionState), HandleDuplicateGoalRule.ResetImportanceIfHigher, null);
+                                }
                                    // sourceFaction.BeginIntelSharingWith(tifactionState);
                                     //tifactionState.BeginIntelSharingWith(sourceFaction);
                                 }
+                            if (sourceFaction.ideology.dataName == "cooperate")
+                            {
+                                if (sourceFaction.ideology.dataName == "destroy" || tifactionState.ideology.dataName == "resist")
+                                {
+                                    sourceFaction.AddGoal(new FactionGoal_NonAggressionPact(sourceFaction, 4, tifactionState), HandleDuplicateGoalRule.ResetImportanceIfHigher, null);
+                                }
+                                // sourceFaction.BeginIntelSharingWith(tifactionState);
+                                //tifactionState.BeginIntelSharingWith(sourceFaction);
+                            }
+                            if (sourceFaction.ideology.dataName == "resist")
+                            {
+                                if (sourceFaction.ideology.dataName == "destroy" || tifactionState.ideology.dataName == "cooperate")
+                                {
+                                    sourceFaction.AddGoal(new FactionGoal_NonAggressionPact(sourceFaction, 4, tifactionState), HandleDuplicateGoalRule.ResetImportanceIfHigher, null);
+                                }
+                                // sourceFaction.BeginIntelSharingWith(tifactionState);
+                                //tifactionState.BeginIntelSharingWith(sourceFaction);
+                            }
                         }
                             return;
+                    }
+                case (InstantEffect)patch_InstantEffect.SetTimerforCouncil:
+                    {
+                        sourceFaction.CouncilTimer = TITimeState.Now();
+                        Log.Debug($"TEST {sourceFaction.CouncilTimer}");
+                        return;
                     }
             }
         }

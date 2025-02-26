@@ -17,7 +17,6 @@ using ModelShark;
 // patch_TINationState nation_VLC = nation as patch_TINationState;
 public class patch_TIGlobalConfig : TIGlobalConfig
 {
-    public bool skipIntro;
     public float TIMissionModifier_ControlPointUnder_Multiplier;
     public string pathGeoscapeMagicResource1;
     public string pathTeleportRegion1;
@@ -31,6 +30,7 @@ public class patch_TIGlobalConfig : TIGlobalConfig
     public string pathMagicIcon;
     public string MagicInlineSpritePath;
     public string DEF_IconPath;
+    public float spoilsPriorityDemocracyChange;
     public int councilorMaxOrgs;
 
     public Color32[] techColor = new Color32[]
@@ -76,6 +76,7 @@ public class patch_TIGlobalConfig : TIGlobalConfig
         pathMagicIcon = "c_icons_2d/magic_tech_icon";
 
         FMI_IconPath = "c_icons_2d/magic_tech_icon";
+        spoilsPriorityDemocracyChange = 0f;
         councilorMaxOrgs = 15;
 
     TIMissionModifier_ControlPointUnder_Multiplier = -0.333f;
@@ -162,4 +163,8 @@ public class patch_TIRegionTemplate : TIRegionTemplate
     public bool? magic;
 
     public bool? Teleport;
+}
+public class patch_TINationTemplate : TINationTemplate
+{
+    public bool? Harmony;
 }

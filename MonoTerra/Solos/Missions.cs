@@ -18,6 +18,54 @@ using PavonisInteractive.TerraInvicta.Tasks;
 using Unity.Entities;
 using static UnityEngine.GraphicsBuffer;
 using static PavonisInteractive.TerraInvicta.TINationState;
+using static MonoMod.InlineRT.MonoModRule;
+
+//public class TIMissionCondition_OneYearSince : TIMissionCondition
+//{  
+//    public override string CanTarget(TICouncilorState councilor, TIGameState possibleTarget)
+//    {
+//        patch_TIFactionState faction = (patch_TIFactionState)councilor.faction;
+
+//        TIDateTime Was = faction.CouncilTimer;
+//        //Log.Debug($"Bye ! {Was}");
+//        //Log.Debug($"Bye2.8 ! {TITimeState.Now()}");
+//        //Log.Debug($"Bye2.8 ! {councilor.faction}");
+//        float differnece = (float)TITimeState.Now().DifferenceInDays(Was);
+
+
+//        if (differnece >= 5)
+//        {
+//            return "_Pass";
+//        }
+//        else
+//        {
+//            return "TIMissionCondition_NotEnoughTime";
+//        }
+//    }
+//}
+
+//public class TIMissionCondition_OneYearSince2 : TIMissionCondition
+//{
+//    public override string CanTarget(TICouncilorState councilor, TIGameState possibleTarget)
+//    {
+//        patch_TIFactionState faction = (patch_TIFactionState)councilor.faction;
+
+//        TIDateTime Was = faction.CouncilTimer;
+
+//        float differnece = (float)TITimeState.Now().DifferenceInDays(Was);
+
+
+//        if (differnece <= 360)
+//        {
+//            return "_Pass";
+//        }
+//        else
+//        {
+//            return "TIMissionCondition_NotEnoughTime";
+//        }
+//    }
+//}
+
 
 public class TIMissionCondition_FederationMember : TIMissionCondition
 {
@@ -105,7 +153,7 @@ public class TIMissionCondition_NotDrained : TIMissionCondition
         return result;
     }
 }
-public class TIMissionCondition_LowEnoughUnity: TIMissionCondition///This is a placeholder test for now, needs more versions/varity and needs to be implemented for missions.
+public class TIMissionCondition_LowEnoughUnity85: TIMissionCondition
 {
 
     public override List<string> feedback
@@ -114,7 +162,39 @@ public class TIMissionCondition_LowEnoughUnity: TIMissionCondition///This is a p
         {
             return new List<string>
             {
-                "TIMissionCondition_Dry"
+                "TIMissionCondition_LowUnity85"
+            };
+        }
+    }
+
+    public override string CanTarget(TICouncilorState councilor, TIGameState possibleTarget)
+    {
+        bool flag = !possibleTarget.isCouncilorState || !(possibleTarget != councilor);
+        string result;
+        float test = TIGlobalValuesState.GlobalValues.earthAtmosphericN2O_ppm;
+        if (test <= 85)
+        {
+            result = "_Pass";
+        }
+        else
+        {
+            result = "TIMissionCondition_LowUnity85";  
+            }
+
+        return result;
+    }
+}
+
+public class TIMissionCondition_LowEnoughUnity75 : TIMissionCondition
+{
+
+    public override List<string> feedback
+    {
+        get
+        {
+            return new List<string>
+            {
+                "TIMissionCondition_LowUnity75"
             };
         }
     }
@@ -130,8 +210,40 @@ public class TIMissionCondition_LowEnoughUnity: TIMissionCondition///This is a p
         }
         else
         {
-            result = "TIMissionCondition_GenericFail";  
-            }
+            result = "TIMissionCondition_LowUnity75";
+        }
+
+        return result;
+    }
+}
+
+public class TIMissionCondition_LowEnoughUnity50 : TIMissionCondition
+{
+
+    public override List<string> feedback
+    {
+        get
+        {
+            return new List<string>
+            {
+                "TIMissionCondition_LowUnity50"
+            };
+        }
+    }
+
+    public override string CanTarget(TICouncilorState councilor, TIGameState possibleTarget)
+    {
+        bool flag = !possibleTarget.isCouncilorState || !(possibleTarget != councilor);
+        string result;
+        float test = TIGlobalValuesState.GlobalValues.earthAtmosphericN2O_ppm;
+        if (test <= 50)
+        {
+            result = "_Pass";
+        }
+        else
+        {
+            result = "TIMissionCondition_LowUnity50";
+        }
 
         return result;
     }
@@ -227,6 +339,29 @@ public class TIMissionCondition_FixableAsset : TIMissionCondition
         return "TIMissionCondition_FixableAsset";
     }
     private GameTimeManager gameTime;
+}
+
+public class TIMissionEffect_BuildConduit : TIMissionEffect///nothing
+{
+    public override string ApplyEffect(TIMissionState mission, TIGameState target, TIMissionOutcome outcome = TIMissionOutcome.Success)
+    {
+        patch_TIRegionState New = (patch_TIRegionState)target.ref_region;
+
+        New.alienFacility2.BuildFacility2();
+
+        Log.Debug($" FACILITY {New.alienFacility2.currentHP}");
+        return string.Empty;
+    }
+}
+public class TIMissionEffect_BuildFacility : TIMissionEffect
+{
+    // Token: 0x06000601 RID: 1537 RVA: 0x0001BE29 File Offset: 0x0001A029
+    public override string ApplyEffect(TIMissionState mission, TIGameState target, TIMissionOutcome outcome = TIMissionOutcome.Success)
+    {
+        target.ref_region.alienFacility.BuildFacility();
+        Log.Debug($" FACILITY {target.ref_region.alienFacility.currentHP}");
+        return string.Empty;
+    }
 }
 
 public class TIMissionEffect_CrackdownEnd : TIMissionEffect

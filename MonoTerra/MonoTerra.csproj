@@ -31,8 +31,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Namespace\TiEffectstate in Namespace.cs" />
+    <Compile Include="Namespace\ResearchScreenController in Namespaces.cs" />
+    <Compile Include="Namespace\TiEffectsState in Namespace.cs" />
     <Compile Include="Namespace\TiGlobalValueState in Namespaces.cs" />
+    <Compile Include="Namespace\TINotificationQueueState in Namespaces .cs" />
     <Compile Include="Solos\GovernmentPolicies.cs" />
     <Compile Include="Solos\Missions.cs" />
     <Compile Include="Namespace\Notifications in Namespace.cs" />
@@ -44,7 +46,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Namespace\TIArmyState in Namespace.cs" />
     <Compile Include="Namespace\TiFactionstate in Namespaces.cs" />
-    <Compile Include="Namespace\TiNationstate And MissionPhase.cs" />
+    <Compile Include="Namespace\TiNationstateAndMissionPhase in Namespaces.cs" />
     <Compile Include="Namespace\TiRegionstate in Namespaces.cs" />
   </ItemGroup>
   <ItemGroup>

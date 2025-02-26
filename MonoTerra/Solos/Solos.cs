@@ -17,6 +17,7 @@ using PavonisInteractive.TerraInvicta.Entities;
 using UnityEngine.UI;
 using PavonisInteractive.TerraInvicta.Systems.GameTime;
 using TMPro;
+using static patch_JoinFederationOption;
 
 public abstract class patch_TIOperationTemplate : TIOperationTemplate, IOperation
 {
@@ -799,10 +800,39 @@ public class patch_TIMissionModifier_ResourceSpent : TIMissionModifier_ResourceS
         private FactionResource heldResource;
     }
 
-//public enum patch_PriorityType : ushort
-//{
-//        Magic = 21
-//}
+public class TIFactionCondition_bCouncilMember : TIFactionCondition
+{
+    public override bool PassesCondition(TIGameState state)
+    {
+        return state.ref_faction != null && TICondition.PassesComparison(this.sign, 0 <= TIEffectsState.SumEffectsModifiers((Context)patch_Context.CouncilMember, state.ref_faction, 0f), TIUtilities.GetBoolValue(this.strValue));
+    }
+}
+
+public class TIFactionCondition_iCouncilMember : TIFactionCondition
+{
+    public override List<string> descriptionParams
+    {
+        get
+        {
+            return new List<string>(1)
+            {
+                base.GetNumericComparisonString(false)
+            };
+        }
+    }
+
+    public override bool PassesCondition(TIGameState state)
+    {
+        int Councilstate = 0;
+
+        foreach (TIFactionState tifactionState in GameStateManager.AllFactions())
+        {
+            Councilstate = (int)(Councilstate + TIEffectsState.SumEffectsModifiers((Context)patch_Context.CouncilMember, state.ref_faction, 0f));
+        }
+            return TICondition.PassesComparison(this.sign, Councilstate, TIUtilities.GetIntValue(this.strValue));
+    }
+}
+
 
     public enum patch_OrgType : ushort
     {
@@ -812,6 +842,8 @@ public enum patch_InstantEffect : ushort
 {
     GrantControlPoint = 420,
     ActivateNAP = 421,
+    Buildtest = 422,
+    SetTimerforCouncil = 423,
 }
 
 public enum patch_TechCategory : ushort
@@ -836,6 +868,8 @@ public enum patch_Context : ushort
     MoneyIncomeModifier = 424,
     ResearchIncomeModifier = 425,
     MaxEquipedOrgs = 426,
+    CouncilMember = 427,
+    InternationalTreatyType = 428,
 }
 
 public enum patch_WorldOceanType : ushort
@@ -848,10 +882,43 @@ public enum patch_DeploymentType : ushort
     teleport = 3
 }
 
+public enum patch_PolicyType
+{
+   CancelOption2 = 420,
+   LeaveCouncil = 421
+}
 
-
-
-
+public enum patch_SpaceFacilityType//notused
+{
+ConduitFacility = 420,
+}
+public static class PolicyManager
+{
+    // Token: 0x060008AB RID: 2219 RVA: 0x0002A410 File Offset: 0x00028610
+    public static void Initialize()
+    {
+        PolicyManager.policies.Clear();
+        PolicyManager.policies.Add(PolicyType.ProposeAllianceOption, new ProposeAllianceOption());
+        PolicyManager.policies.Add(PolicyType.EndAllianceOption, new EndAllianceOption());
+        PolicyManager.policies.Add(PolicyType.InitiateRivalryOption, new InitiateRivalryOption());
+        PolicyManager.policies.Add(PolicyType.EndRivalryOption, new EndRivalryOption());
+        PolicyManager.policies.Add(PolicyType.WarOption, new WarOption());
+        PolicyManager.policies.Add(PolicyType.EndWarOption, new EndWarOption());
+        PolicyManager.policies.Add(PolicyType.JoinFederationOption, new JoinFederationOption());
+        PolicyManager.policies.Add(PolicyType.LeaveFederationOption, new LeaveFederationOption());
+        PolicyManager.policies.Add(PolicyType.UnificationOption, new UnificationOption());
+        PolicyManager.policies.Add(PolicyType.PeacefulBreakupOption, new PeacefulBreakupOption());
+        PolicyManager.policies.Add(PolicyType.TransferRegionsOption, new TransferRegionsOption());
+        PolicyManager.policies.Add(PolicyType.DisbandArmyOption, new DisbandArmyOption());
+        PolicyManager.policies.Add(PolicyType.DisarmNuclearWeaponsOption, new DisarmNuclearWeaponsOption());
+        PolicyManager.policies.Add(PolicyType.DeclareIndependenceOption, new DeclareIndependenceOption());
+        PolicyManager.policies.Add(PolicyType.EmployNuclearWeaponsOption, new EmployNuclearWeaponsOption());
+        PolicyManager.policies.Add(PolicyType.CancelOption, new CancelOption());
+        PolicyManager.policies.Add((PolicyType)patch_PolicyType.CancelOption2, new CancelOption2());
+        PolicyManager.policies.Add((PolicyType)patch_PolicyType.LeaveCouncil, new LeaveCouncil());
+    }
+    public static Dictionary<PolicyType, IPolicyOption> policies = new Dictionary<PolicyType, IPolicyOption>();
+}
 
 //public class Patch_ResupplyOperation : ResupplyOperation
 //{
