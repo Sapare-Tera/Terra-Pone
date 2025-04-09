@@ -16,6 +16,7 @@ using UnityEngine.EventSystems;
 using MonoMod;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using PavonisInteractive.TerraInvicta.Systems;
 
 namespace PavonisInteractive.TerraInvicta
 {
@@ -34,6 +35,7 @@ namespace PavonisInteractive.TerraInvicta
                 case MarkerType.HumanMissionControlFacility:
                 case MarkerType.HumanLaunchFacility:
                 case MarkerType.RegionalStatusIcon:
+                case MarkerType.AlienFacility:
                     hasModel = false;
                     break;
             }
@@ -60,7 +62,7 @@ namespace PavonisInteractive.TerraInvicta
             foreach (patch_TIFactionState tifactionState in GameStateManager.AllFactions())
             {
 
-                if (TIEffectsState.SumEffectsModifiers((Context)patch_Context.InfluenceIncomeModifier, tifactionState, 0f) == 0)
+                if (TIEffectsState.SumEffectsModifiers((Context)patch_Context.Starter, tifactionState, 0f) == 0)
                 {
                     if (tifactionState.ideology.dataName == "cooperate")
                     {
@@ -211,12 +213,91 @@ namespace PavonisInteractive.TerraInvicta
     
     public class patch_TINationState : TINationState
     {
-        //Impacts of Harmony on nation
-        public float ControlPointPriorityBonuses(TIControlPoint controlPoint, PriorityType priority)
+        //Adding Harmony to template
+        public extern void orig_InitWithTemplate(TIDataTemplate template);
+        public bool Government;
+        public bool Harmony;
+        public override void InitWithTemplate(TIDataTemplate template)
+        {
+            patch_TINationTemplate tinationTemplate = template as patch_TINationTemplate;
+            this.Harmony = tinationTemplate.Harmony.GetValueOrDefault();
+            this.Government = tinationTemplate.Government.GetValueOrDefault();
+            orig_InitWithTemplate(template);
+        }
+
+
+
+            //Impacts of Harmony on nation
+            public float ControlPointPriorityBonuses(TIControlPoint controlPoint, PriorityType priority)
         {
             TIFactionState faction = controlPoint.faction;
+            if (priority == PriorityType.Military_FoundMilitary)
+            {
+                return controlPoint.diversityBonus[priority] + this.NationalPriorityBonuses(priority) + this.HarmonyPriorityBonus(priority);
+            }
             return ((faction != null) ? faction.cachedPriorityBonuses[priority] : 0f) + controlPoint.diversityBonus[priority] + this.NationalPriorityBonuses(priority) + this.HarmonyPriorityBonus(priority);
         }
+
+        public float ControlPointPriorityBonuses_Uncached(TIControlPoint controlPoint, PriorityType priority)
+        {
+            TIFactionState faction = controlPoint.faction;
+            if (priority == PriorityType.Military_FoundMilitary)
+             {
+                return controlPoint.diversityBonus[priority] + this.NationalPriorityBonuses(priority) + this.HarmonyPriorityBonus(priority);
+            }
+            return ((faction != null) ? faction.SumPriorityBonuses(priority, false) : 0f) + controlPoint.diversityBonus[priority] + this.NationalPriorityBonuses(priority) + this.HarmonyPriorityBonus(priority);
+        }
+
+        public void OnOppressionPriorityComplete()//Remove gov change from Opression
+        {
+            this.AddToUnrest(this.OppressionPriorityUnrestChange, TINationState.UnrestChangeReason.UnrestReason_OppressionPriority, 10f);
+            this.AddToDemocracy(this.OppressionPriorityDemocracyChange, TINationState.DemocracyChangeReason.DemReason_OppressionPriority);
+            this.AddToCohesion(this.OppressionPriorityCohesionChange, TINationState.CohesionChangeReason.CohesionReason_OppressionPriority);
+        }
+
+        public List<TINationState> ValidNewWarTargets()//tries to make it so you can only attack alien nation when in internation peace
+        {
+            if (!this.WarCapable)
+            {
+                return new List<TINationState>();
+            }
+
+            
+
+
+            List<TINationState> list = new List<TINationState>(this.rivals);
+            List<TINationState> warCapableAllies = this.WarCapableAllies;
+            foreach (TINationState tinationState in this.rivals)
+            {
+                if (tinationState.WarCapableAllies.Intersect(warCapableAllies).Count<TINationState>() > 0)
+                {
+                    list.Remove(tinationState);
+                }
+                if (!this.AccessibleWarEnemy(tinationState, false))
+                {
+                    list.Remove(tinationState);
+                }
+
+                if (this.executiveFaction != null)
+                {
+                    patch_TIFactionState Faction = (patch_TIFactionState)this.executiveFaction;
+                    if (Faction.InternationalTreatyType == 1)
+                    {
+                        if (tinationState.alienNation != true)
+                        {
+                            list.Remove(tinationState);
+                        }
+                    }
+                }
+            }
+            return list.Distinct<TINationState>().ToList<TINationState>();
+        }
+
+
+
+
+
+        public float OppressionPriorityDemocracyChange => 0;
 
         public float HarmonyPriorityBonus(PriorityType priority)
         {
@@ -436,20 +517,23 @@ namespace PavonisInteractive.TerraInvicta
             //return Mathf.Clamp(num, -0.99f, 0f);
             return 0;//Disabled
         }
-        public void OnWelfarePriorityComplete()
-        {
-            this.AddToInequality(this.welfarePriorityInequalityChange, TINationState.InequalityChangeReason.InqReason_WelfarePriority);
-            if (this.canAccumulateDecolonizeTriggers)
-            {
-                this.accumulatedDecolonizeTriggers++;
-                if (this.accumulatedDecolonizeTriggers >= 1000 && this.CandidateDecolonizeRegions().Count > 0)
-                {
-                    this.OnDecolonizeRegionPriorityComplete();
-                    this.accumulatedDecolonizeTriggers = 0;
-                }
-            }
-            this.AddToSustainability(this.spoilsSustainabilityChange * -1);
-        }
+   //     public void OnWelfarePriorityComplete()
+   //     {
+			//this.AddToInequality(this.welfarePriorityInequalityChange, TINationState.InequalityChangeReason.InqReason_WelfarePriority);
+			//if (this.canAccumulateDecolonizeTriggers)
+			//{
+			//	TIRegionState nextDecolonizeRegion = this.GetNextDecolonizeRegion();
+			//	if (nextDecolonizeRegion != null)
+			//	{
+			//		nextDecolonizeRegion.accumulatedDecolonizeTriggers++;
+			//		if (nextDecolonizeRegion.accumulatedDecolonizeTriggers >= 1000)
+			//		{
+			//			this.OnDecolonizeRegionPriorityComplete(nextDecolonizeRegion);
+			//		}
+			//	}
+			//}
+   //         this.AddToSustainability(this.spoilsSustainabilityChange * -1);
+   //     }
         public void OnFoundMilitaryPriorityComplete()
         {
             //TIFactionState controlPointTypeOwner = this.GetControlPointTypeOwner(ControlPointType.Aristocracy);
@@ -470,7 +554,8 @@ namespace PavonisInteractive.TerraInvicta
                     // Log.Debug($"control2 {control}");
                     num /= control;
                     // Log.Debug($"Num2 {num}");
-                    ticontrolPoint.faction.AddToCurrentResource(num, patch_FactionResource.Magic, false);
+                    float Magicmodifier = TIEffectsState.SumEffectsModifiers((Context)patch_Context.ResearchIncomeModifier, ticontrolPoint.faction, 0f);
+                    ticontrolPoint.faction.AddToCurrentResource(num * Magicmodifier, (FactionResource)patch_FactionResource.Magic, false);
                     //ticontrolPoint.faction.thisWeeksCumulativeSpoils += num;
                 }
             }
@@ -481,22 +566,70 @@ namespace PavonisInteractive.TerraInvicta
         }
         public void OnEnvironmentPriorityComplete()
         {
-            if (this.Harmony == false)
-            {
-                this.AddToSustainability((this.environmentPrioritySustainabilityChange) * 10);
-            }
-            else
-            {
-                this.AddToSustainability(this.environmentPrioritySustainabilityChange * -10);
-            }
-            if (this.canAccumulateDecontaminateTriggers)
-            {
-                this.accmulatedDecontaminateTriggers++;
-                if (this.accmulatedDecontaminateTriggers > 100 && this.CandidateDecontaminateRegions().Count > 0)
+            //if (this.sustainability <= 0f)
+            //{
+            //	TIGlobalValuesState.GlobalValues.AddEnvironmentPriorityEnvEffect(this);
+            //}
+            
+                if (this.Harmony == false)
                 {
-                    this.OnDecontaminateRegionPriorityComplete();
-                    this.accmulatedDecontaminateTriggers = 0;
+                    this.AddToSustainability((this.environmentPrioritySustainabilityChange) * 10);
                 }
+                else
+                {
+                    this.AddToSustainability(this.environmentPrioritySustainabilityChange * -10);
+                }
+                if (this.canAccumulateDecontaminateTriggers)
+                {
+                    TIRegionState nextDecontaminateRegion = this.GetNextDecontaminateRegion();
+                    if (nextDecontaminateRegion != null)
+                    {
+                        nextDecontaminateRegion.accumulatedDecontaminateTriggers++;
+                        if (nextDecontaminateRegion.accumulatedDecontaminateTriggers > 100)
+                        {
+                            this.OnDecontaminateRegionPriorityComplete(nextDecontaminateRegion);
+                        }
+                    }
+                }
+        }
+
+
+        //public static string BuildDemocracyTooltip(TINationState nation)
+        //{
+        //    return new StringBuilder(TIGlobalConfig.globalConfig.democracyInlineSpritePath).Append(Loc.T("UI.Nation.NationalStatTooltipHeader", new object[]
+        //    {
+        //        Loc.T("UI.Nation.Democracy"),
+        //        nation.GetDemocracyDescriptiveStringAndValue(3)
+        //    })).AppendLine().AppendLine(NationInfoController.ChangeString(Loc.T("UI.Nation.Democracy"), nation.democracy - nation.historyDemocracy[31], true, NationInfoController.WhatIsGood.upIsGood, false, false, 0f)).AppendLine().AppendLine(TIGlobalConfig.globalConfig.verboseStatDescriptions ? Loc.T("UI.Nation.DemocracyHelp1") : string.Empty).AppendLine().AppendLine(Loc.T("UI.Nation.DemocracyHelp2", new object[]
+        //    {
+        //        TIUtilities.FormatSmallNumber(nation.governmentPriorityDemocracyChange, 7, 1, true, false),
+        //        NationInfoController.requiredIPSummaryText(nation, PriorityType.Government),
+        //        TIUtilities.FormatSmallNumber(nation.OppressionPriorityDemocracyChange, 7, 1, true, false),
+        //        NationInfoController.requiredIPSummaryText(nation, PriorityType.Oppression),
+        //        TIUtilities.FormatSmallNumber(nation.spoilsPriorityDemocracyChange, 7, 0, true, false),
+        //        NationInfoController.requiredIPSummaryText(nation, PriorityType.Spoils)
+        //    })).ToString();
+        //}
+
+        public void OnGovernmentPriorityComplete()//flip if gov up or down.
+        {
+            if (this.Government == true)
+            {
+                if (this.democracy >= 10f)
+                {
+                    this.OnKnowledgePriorityComplete();
+                    return;
+                }
+                this.AddToDemocracy(this.governmentPriorityDemocracyChange, TINationState.DemocracyChangeReason.DemReason_GovernmentPriority);
+            }
+            if (this.Government == false)
+            {
+                if (this.democracy <= 0f)
+                {
+                    this.OnKnowledgePriorityComplete();
+                    return;
+                }
+                this.AddToDemocracy(-this.governmentPriorityDemocracyChange, TINationState.DemocracyChangeReason.DemReason_GovernmentPriority);
             }
         }
 
@@ -519,7 +652,7 @@ namespace PavonisInteractive.TerraInvicta
         {
             get
             {
-                return (this.priorityEffectPopScaling * (TemplateManager.global.spoilsPrioritySustainabilityChange)) * -100;
+                return 0;
             }
         }
 
@@ -644,15 +777,15 @@ namespace PavonisInteractive.TerraInvicta
 		}
 
         //Showing Sustainbility/Harmony as exact number.
-        public static string SustainabilityValueForDisplay(float sustainability, int extendValue = 2)
+        public static string SustainabilityValueForDisplay(float sustainability)
         {
 
-            return TIUtilities.FormatSmallNumber(Mathf.Max(0,sustainability), 7, extendValue, true, false);
+            return TIUtilities.FormatSmallNumber(Mathf.Max(0,sustainability), 3, 3, true, false);
         }
 
     
 
-        //CHanges to Funding and Spoils Calculation:
+        //Cjanges to Funding and Spoils Calculation:
         public float get_spaceFundingPriorityIncomeChange()
         {
             return ((TemplateManager.global.fundingPriorityBaseIncomeIncrease * this.BaseInvestmentPoints_month() + this.numCoreEconomicRegions_dailyCache * 10) * (0.5f + (this.sustainability/5)));
@@ -674,32 +807,10 @@ namespace PavonisInteractive.TerraInvicta
 		}
 
 
-        //Adding Harmony to template
-        public extern void orig_InitWithTemplate(TIDataTemplate template);
-        public override void InitWithTemplate(TIDataTemplate template)
-        {
-            orig_InitWithTemplate(template);
-            patch_TINationTemplate tinationTemplate = template as patch_TINationTemplate;
-            this.Harmony = tinationTemplate.Harmony.GetValueOrDefault();
-        }
-
-
-
-
-
-
-
-
-
-
-
-
-
         //Dependencies and new variables.
         public float sustainability { get; private set; }
         public int accumulatedDecolonizeTriggers { get; private set; }
         public int accmulatedDecontaminateTriggers { get; private set; }
-        public bool Harmony;
         public bool nuclearProgram { get; private set; }
         private float boostPerYear_dekatons
         {
@@ -708,30 +819,97 @@ namespace PavonisInteractive.TerraInvicta
                 return this.regions.Sum((TIRegionState region) => region.boostPerYear_dekatons);
             }
         }
+        [SerializeField]
+        private float baseInvestmentPoints_month;
 
+        public float BaseInvestmentPoints_month()//Conduit adds 5%
+        {
+            double Conduits = 1;
+            if (this.Harmony == false)
+            {
+                foreach (patch_TIRegionState regions in this.regions)
+                {
+                    if (regions.Facility.built)
+                    {
+                        Conduits = Conduits + 0.05;
+                    }
+                }
+            }
+            return (float)(Conduits * this.baseInvestmentPoints_month);
+        }
+        public float ControlPointMaintenanceCost//Conduit removes 10%
+        {
+            get
+            {
+                if (!this.alienNation)
+                {
+                    double Cost = (float)(Mathd.Pow(this.GDP / 1000000000.0, (double)TIGlobalConfig.globalConfig.controlPointCostScaling) / (double)(2 * this.numControlPoints));
+                    double Conduits = 1;
+                    if (this.Harmony == true)
+                    {
+                            foreach (patch_TIRegionState regions in this.regions)
+                            {
+                                if (regions.Facility.built)
+                                {
+                                    Conduits = Conduits - 0.10;
+                                }
+                            }
+                    }
 
+                    Cost = Cost * Conduits;
+                    return (float)Cost;
+                }
+                return 0f;
+            }
+        }
 
         //Change what image to use for Sustainbility(HARMONY)
         public string SustainabilityIcon()
         {
-            float sustainability = this.sustainability;
-            if (sustainability <= 1.5f)
+
+            if (this.Harmony == true)
             {
-                return "icons_2d/ICO_GHG_emission_1";
+                float sustainability = this.sustainability;
+                if (sustainability <= 1.5f)
+                {
+                    return "misc/Harmony";
+                }
+                if (sustainability < 4.0f)
+                {
+                    return "misc/Harmony";
+                }
+                if (sustainability >= 4.0f && sustainability <= 6.0f)
+                {
+                    return "misc/Harmony";
+                }
+                if (sustainability <= 8.5f)
+                {
+                    return "misc/Harmony";
+                }
+                return "misc/Harmony";
             }
-            if (sustainability < 4.0f)
+            if (this.Harmony == false)
             {
-                return "icons_2d/ICO_GHG_emission_2";
+                float sustainability = this.sustainability;
+                if (sustainability <= 1.5f)
+                {
+                    return "misc/Dominance";
+                }
+                if (sustainability < 4.0f)
+                {
+                    return "misc/Dominance";
+                }
+                if (sustainability >= 4.0f && sustainability <= 6.0f)
+                {
+                    return "misc/Dominance";
+                }
+                if (sustainability <= 8.5f)
+                {
+                    return "misc/Dominance";
+                }
+                return "misc/Dominance";
             }
-            if (sustainability >= 4.0f && sustainability <= 6.0f)
-            {
-                return "icons_2d/ICO_GHG_emission_3";
-            }
-            if (sustainability <= 8.5f)
-            {
-                return "icons_2d/ICO_GHG_emission_4";
-            }
-            return "icons_2d/ICO_GHG_emission_5";
+            return "misc/Dominance";
         }
 
         public string SustainabilityIconInlinePath()
@@ -764,11 +942,199 @@ namespace PavonisInteractive.TerraInvicta
     public class patch_NationInfoController : NationInfoController
     {
         public extern void orig_Initialize();
-        public override void Initialize()//Want to change LOC based on flip but its locked behind broken decompiled code.
+        public override void Initialize()//Want to change LOC based on flip but its locked behind broken decompiled code. HARMONY/Dominance
         {
             orig_Initialize();
             //base.Initialize();
+            GameControl.eventManager.AddListener<Etruscan_RegionMapEntitySelected>(new EventManager.EventDelegate<Etruscan_RegionMapEntitySelected>(this.TESTShowRegionMapObjectPanel), null, null, false, false);
         }
+
+
+        //All below is to have panel pop up when new marker is selected
+        private void TESTShowRegionMapObjectPanel(Etruscan_RegionMapEntitySelected e)
+        {
+            this.TESTShowMapObjectPanel(e.alienEntity);
+        }
+
+         private TIRegionEtruscanEntityState ALTdisplayedRegionLocationState;
+
+        private void TESTShowMapObjectPanel(TIRegionEtruscanEntityState regionEntity)
+        {
+            if (!this.Visible() || !this.mapObjectDetailCanvas.enabled)
+            {
+                if (!this.Visible())
+                {
+                    this.Show();
+                }
+                this.mapObjectDetailCanvas.enabled = true;
+                base.canvasManager.SetActiveInfoPanel(InfoPanel.EarthMapObjectDetail, 0f);
+                GameControl.eventManager.AddListener<InfoScreenOpened>(new EventManager.EventDelegate<InfoScreenOpened>(this.AutocloseMapObjectPanel), null, null, true, false);
+                GameControl.eventManager.AddListener<RegionDataUpdated>(new EventManager.EventDelegate<RegionDataUpdated>(this.TESTUpdateMapObjectPanel), null, null, true, false);
+            }
+            this.ALTdisplayedRegionLocationState = regionEntity;
+            this.TESTUpdateMapObjectPanel(regionEntity);
+            this.HideTutorials();
+        }
+
+        private void TESTUpdateMapObjectPanel(RegionDataUpdated e)
+        {
+            if (this.mapObjectDetailCanvas.enabled && e.region == this.ALTdisplayedRegionLocationState.ref_region)
+            {
+                this.TESTUpdateMapObjectPanel(this.ALTdisplayedRegionLocationState);
+            }
+        }
+
+        private void AutocloseMapObjectPanel(InfoScreenOpened e)
+        {
+            if (this.Visible() && this.mapObjectDetailCanvas.enabled)
+            {
+                this.Hide();
+                GameControl.eventManager.AddListener<InfoScreenClosed>(new EventManager.EventDelegate<InfoScreenClosed>(this.RestoreMapObjectPanel), null, null, true, false);
+            }
+        }
+        private void RestoreMapObjectPanel(InfoScreenClosed e)
+        {
+            this.Show();
+            GameControl.eventManager.RemoveListener<InfoScreenClosed>(new EventManager.EventDelegate<InfoScreenClosed>(this.RestoreMapObjectPanel), null);
+        }
+        private void CloseMapObjectPanel()
+        {
+            if (this.mapObjectDetailCanvas != null)
+            {
+                GeneralControlsController.ConditionalCancelSelectedOtherState(this.ALTdisplayedRegionLocationState);
+                this.mapObjectDetailCanvas.enabled = false;
+                this.ALTdisplayedRegionLocationState = null;
+                GameControl.eventManager.RemoveListener<InfoScreenOpened>(new EventManager.EventDelegate<InfoScreenOpened>(this.AutocloseMapObjectPanel), null);
+                GameControl.eventManager.RemoveListener<RegionDataUpdated>(new EventManager.EventDelegate<RegionDataUpdated>(this.TESTUpdateMapObjectPanel), null);
+                GameControl.eventManager.RemoveListener<AlienRegionEntityUpdated>(new EventManager.EventDelegate<AlienRegionEntityUpdated>(this.OnRegionEntityUpdated), null);
+                this.CheckforMainCanvasClose();
+            }
+        }
+        private void CheckforMainCanvasClose()
+        {
+            if (this.nationPanelCanvas != null && !this.nationPanelCanvas.enabled && this.mapObjectDetailCanvas != null && !this.mapObjectDetailCanvas.enabled)
+            {
+                this.Hide();
+                GameControl.eventManager.RemoveListener<InfoScreenOpened>(new EventManager.EventDelegate<InfoScreenOpened>(this.AutocloseNationPanel), null);
+            }
+        }
+
+        private void AutocloseNationPanel(InfoScreenOpened e)
+        {
+            if (this.Visible() && this.nationPanelCanvas.enabled)
+            {
+                this.CloseAnySecondaryPanels(null, false);
+                this.Hide();
+                GameControl.eventManager.AddListener<InfoScreenClosed>(new EventManager.EventDelegate<InfoScreenClosed>(this.RestoreNationPanel), null, null, true, false);
+            }
+        }
+
+        private void RestoreNationPanel(InfoScreenClosed e)
+        {
+            this.Show();
+            this.NationInfoCanvasUITutorialController.HoldTutorial(CampaignMilestone.UITutorial_NationsInfoCanvas_NationPanel, false, true);
+            GameControl.eventManager.RemoveListener<InfoScreenClosed>(new EventManager.EventDelegate<InfoScreenClosed>(this.RestoreNationPanel), null);
+        }
+       
+        private void TESTUpdateMapObjectPanel(TIRegionEtruscanEntityState regionEntity)
+        {
+            GameControl.eventManager.RemoveListener<AlienRegionEntityUpdated>(new EventManager.EventDelegate<AlienRegionEntityUpdated>(this.OnRegionEntityUpdated), null);
+            if (!regionEntity.Extant())
+            {
+                this.CloseMapObjectPanel();
+                return;
+            }
+            this.mapObjectDetailMainHeadline.SetText(regionEntity.displayName);
+            this.mapObjectFlag.sprite = regionEntity.ref_region.nation.flag;
+            this.mapObjectDetailHeader.SetText(regionEntity.descriptor);
+            this.mapObjectDetailLocation.SetText(Loc.T("UI.Nation.MapObjectLocation", new object[]
+            {
+                regionEntity.ref_region.displayName,
+                regionEntity.ref_region.nation.displayNameWithArticle
+            }));
+            this.mapObjectDetailExplainerText.SetText(regionEntity.description);
+            //if (regionEntity.isRegionSpaceFacility)
+            //{
+            //    TIRegionSpaceFacilityState ref_regionSpaceFacility = regionEntity.ref_regionSpaceFacility;
+            //    switch (ref_regionSpaceFacility.spaceFacilityType)
+            //    {
+            //        case SpaceFacilityType.launchFacility:
+            //            GameControl.assetLoader.LoadAssetForImageAssignment(TemplateManager.global.pathBoostIcon, this.statPanelIcon);
+            //            this.statPanelValueText.SetText(TIUtilities.FormatBigOrSmallNumber(regionEntity.ref_region.boostPerYear_dekatons, 1, 7, 0, false, false));
+            //            this.statPanelObject.SetActive(true);
+            //            if (regionEntity.ref_region.nation.canBuildSTOSquadrons)
+            //            {
+            //                this.statPanelObject2.SetActive(true);
+            //                this.statPanelValueText2.SetText(Loc.T("UI.NationPriorityAccumulation", new object[]
+            //                {
+            //                ref_regionSpaceFacility.region.availableSTOFighters.ToString(),
+            //                ref_regionSpaceFacility.region.numSTOFighters.ToString()
+            //                }));
+            //                this.mapObjectButtonPanelButton2.gameObject.SetActive(true);
+            //                LaunchSTOInterceptorsOperation launchSTOInterceptorsOperation = new LaunchSTOInterceptorsOperation();
+            //                this.mapObjectButtonPanelButton2.interactable = (ref_regionSpaceFacility.region.numSTOFighters > 0 && ref_regionSpaceFacility.region.nation.executiveFaction == base.activePlayer && launchSTOInterceptorsOperation.OpVisibleToActor(base.activePlayer, ref_regionSpaceFacility.ref_spaceBody));
+            //            }
+            //            else
+            //            {
+            //                this.statPanelObject2.SetActive(false);
+            //                this.mapObjectButtonPanelButton2.gameObject.SetActive(false);
+            //            }
+            //            this.mapObjectButtonPanelObject.SetActive(true);
+            //            this.mapObjectButtonPanelButton.interactable = regionEntity.ref_region.nation.FactionHasControlPoint(base.activePlayer);
+            //            this.mapObjectButtonText.SetText(Loc.T("UI.Nation.MapObjectPanelLaunch"));
+            //            this.mapObjectButtonText2.SetText(Loc.T("UI.Nation.MapObjectPanelFighters"));
+            //            break;
+            //        case SpaceFacilityType.missionControlFacility:
+            //            GameControl.assetLoader.LoadAssetForImageAssignment(TemplateManager.global.pathMissionControlIcon, this.statPanelIcon);
+            //            this.statPanelValueText.SetText(regionEntity.ref_region.missionControl.ToString("N0"));
+            //            this.statPanelObject.SetActive(true);
+            //            this.statPanelObject2.SetActive(false);
+            //            this.mapObjectButtonPanelObject.SetActive(false);
+            //            break;
+            //        case SpaceFacilityType.spaceDefenseFacility:
+            //            this.statPanelObject.SetActive(false);
+            //            this.statPanelObject2.SetActive(false);
+            //            this.mapObjectButtonPanelObject.SetActive(false);
+            //            break;
+            //    }
+            //}
+                TIRegionEtruscanEntityState tiregionEtruscanEntityState = regionEntity as TIRegionEtruscanEntityState;
+                if (tiregionEtruscanEntityState != null)
+                {
+                    GameControl.eventManager.AddListener<AlienRegionEntityUpdated>(new EventManager.EventDelegate<AlienRegionEntityUpdated>(this.OnRegionEntityUpdated), null, tiregionEtruscanEntityState, false, false);
+                }
+                this.statPanelObject.SetActive(false);
+                this.statPanelObject2.SetActive(false);
+                this.mapObjectButtonPanelObject.SetActive(false);
+            
+            if (!string.IsNullOrEmpty(regionEntity.GetIllustrationPath(base.activePlayer)))
+            {
+                GameControl.assetLoader.LoadAssetForImageAssignment(regionEntity.GetIllustrationPath(base.activePlayer), this.mapObjectDetailIllustration);
+                this.mapObjectDetailIllustration.color = Color.white;
+                return;
+            }
+            this.mapObjectDetailIllustration.color = Color.black;
+        }
+
+
+
+        //THIS IS ALL STUPID ABOVE
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         private static string requiredIPSummaryText(TINationState nation, PriorityType priority)
         {
@@ -840,7 +1206,7 @@ namespace PavonisInteractive.TerraInvicta
             switch (priority)
             {
                 case PriorityType.Economy:
-                    stringBuilder.Append(global.perCapitaGDPInlineSpritePath).Append(nation.economyPriorityPerCapitaIncomeChange.ToString("N2")).Append(" ").Append(global.inequalityInlineSpritePath).Append(TIUtilities.FormatSmallNumber(nation.economyPriorityInequalityChange, 7, 0, true, false));
+                    stringBuilder.Append(global.perCapitaGDPInlineSpritePath).Append(nation.economyPriorityPerCapitaIncomeChange.ToString("N2")).Append(" ").Append(global.upGreenArrowInlineSpritePath).Append((nation.economyPriorityPerCapitaIncomeChange * nation.population_Millions / 1000).ToString("N2")).Append("Billion ").Append(global.inequalityInlineSpritePath).Append(TIUtilities.FormatSmallNumber(nation.economyPriorityInequalityChange, 7, 0, true, false));
                     break;
                 case PriorityType.Welfare:
                     stringBuilder.Append(global.inequalityInlineSpritePath).Append(TIUtilities.FormatSmallNumber(nation.welfarePriorityInequalityChange, 7, 1, true, false)).Append(global.sustainabilityInlineSpritePath_Green).Append(nation.SustainabilityChangeForDisplay(nation.spoilsSustainabilityChange * -1));
@@ -869,7 +1235,14 @@ namespace PavonisInteractive.TerraInvicta
                     stringBuilder.Append(global.educationInlineSpritePath).Append(TIUtilities.FormatSmallNumber(nation.knowledgePriorityEducationChange, 7, 1, true, false)).Append(" ").Append(global.cohesionInlineSpritePath).Append(TIUtilities.FormatSmallNumber(nation.knowledgePriorityCohesionChange, 7, 1, true, false));
                     break;
                 case PriorityType.Government:
-                    stringBuilder.Append(global.democracyInlineSpritePath).Append(TIUtilities.FormatSmallNumber(nation.governmentPriorityDemocracyChange, 7, 1, true, false));
+                    if (nation.Government == false)
+                    {
+                        stringBuilder.Append(global.democracyInlineSpritePath).Append(TIUtilities.FormatSmallNumber(-nation.governmentPriorityDemocracyChange, 7, 1, true, false));
+                    }
+                    else if (nation.Government == true)
+                    {
+                        stringBuilder.Append(global.democracyInlineSpritePath).Append(TIUtilities.FormatSmallNumber(nation.governmentPriorityDemocracyChange, 7, 1, true, false));
+                    }
                     break;
                 case PriorityType.Unity:
                     stringBuilder.Append(global.cohesionInlineSpritePath).Append(TIUtilities.FormatSmallNumber(nation.unityPriorityCohesionChange, 7, 1, true, false)).Append(" ").Append(global.educationInlineSpritePath).Append(TIUtilities.FormatSmallNumber(nation.unityPriorityEducationChange, 7, 1, true, false));

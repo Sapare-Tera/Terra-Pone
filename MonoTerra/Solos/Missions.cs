@@ -341,29 +341,23 @@ public class TIMissionCondition_FixableAsset : TIMissionCondition
     private GameTimeManager gameTime;
 }
 
-public class TIMissionEffect_BuildConduit : TIMissionEffect///nothing
+public class TIMissionEffect_BuildConduit : TIMissionEffect//Builds a marker
 {
     public override string ApplyEffect(TIMissionState mission, TIGameState target, TIMissionOutcome outcome = TIMissionOutcome.Success)
     {
-        patch_TIRegionState New = (patch_TIRegionState)target.ref_region;
+        patch_TIRegionState Region = (patch_TIRegionState)target.ref_region;
 
-        New.alienFacility2.BuildFacility2();
+        if (Region.Facility.built != true)
+        {
+            Region.Facility.BuildFacility();
+            Region.template.environment = EnvironmentType.Beneficiary;
+            //Region.AdjacentRegions.template.environment = EnvironmentType.Beneficiary;
+            //target.ref_region.alienFacility.BuildFacility();
+        }
 
-        Log.Debug($" FACILITY {New.alienFacility2.currentHP}");
         return string.Empty;
     }
 }
-public class TIMissionEffect_BuildFacility : TIMissionEffect
-{
-    // Token: 0x06000601 RID: 1537 RVA: 0x0001BE29 File Offset: 0x0001A029
-    public override string ApplyEffect(TIMissionState mission, TIGameState target, TIMissionOutcome outcome = TIMissionOutcome.Success)
-    {
-        target.ref_region.alienFacility.BuildFacility();
-        Log.Debug($" FACILITY {target.ref_region.alienFacility.currentHP}");
-        return string.Empty;
-    }
-}
-
 public class TIMissionEffect_CrackdownEnd : TIMissionEffect
 {
 

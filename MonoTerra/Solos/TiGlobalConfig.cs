@@ -167,4 +167,6 @@ public class patch_TIRegionTemplate : TIRegionTemplate
 public class patch_TINationTemplate : TINationTemplate
 {
     public bool? Harmony;
+
+    public bool? Government;
 }

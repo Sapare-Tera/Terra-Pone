@@ -8,6 +8,10 @@ using System.Threading.Tasks;
 using TMPro;
 using UnityEngine.UI;
 using UnityEngine;
+using PavonisInteractive.TerraInvicta.Systems.GameTime;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using PavonisInteractive.TerraInvicta.Systems.UI;
 
 namespace PavonisInteractive.TerraInvicta
 {
@@ -61,7 +65,7 @@ namespace PavonisInteractive.TerraInvicta
                         {
                             if ( sourceFaction.ideology.dataName == "destroy" )
                             {
-                                if ( tifactionState.ideology.dataName == "cooperate" || tifactionState.ideology.dataName == "resist")
+                                if (tifactionState.ideology.dataName == "cooperate" || tifactionState.ideology.dataName == "resist")
                                 {
                                     sourceFaction.AddGoal(new FactionGoal_NonAggressionPact(sourceFaction, 4, tifactionState), HandleDuplicateGoalRule.ResetImportanceIfHigher, null);
                                 }
@@ -70,7 +74,7 @@ namespace PavonisInteractive.TerraInvicta
                                 }
                             if (sourceFaction.ideology.dataName == "cooperate")
                             {
-                                if (sourceFaction.ideology.dataName == "destroy" || tifactionState.ideology.dataName == "resist")
+                                if (tifactionState.ideology.dataName == "destroy" || tifactionState.ideology.dataName == "resist")
                                 {
                                     sourceFaction.AddGoal(new FactionGoal_NonAggressionPact(sourceFaction, 4, tifactionState), HandleDuplicateGoalRule.ResetImportanceIfHigher, null);
                                 }
@@ -79,7 +83,7 @@ namespace PavonisInteractive.TerraInvicta
                             }
                             if (sourceFaction.ideology.dataName == "resist")
                             {
-                                if (sourceFaction.ideology.dataName == "destroy" || tifactionState.ideology.dataName == "cooperate")
+                                if (tifactionState.ideology.dataName == "destroy" || tifactionState.ideology.dataName == "cooperate")
                                 {
                                     sourceFaction.AddGoal(new FactionGoal_NonAggressionPact(sourceFaction, 4, tifactionState), HandleDuplicateGoalRule.ResetImportanceIfHigher, null);
                                 }
@@ -97,228 +101,6 @@ namespace PavonisInteractive.TerraInvicta
                     }
             }
         }
-    }
-
-
-    public class patch_GeneralControlsController : GeneralControlsController
-    {
-        private Dictionary<patch_FactionResource, int> proposedResourceSales;
-
-        public TMP_Text waterInfoText;
-
-        public Transform MagicPanel;
-
-        [Header("Resources Data")]
-        public TMP_Text magicInfoText;
-
-        private void UpdateResourceData(TIFactionState faction)
-        {
-            this.incomeInfoText.SetText(GeneralControlsController.ResourceReportString(faction, FactionResource.Money), true);
-            this.influenceInfoText.SetText(GeneralControlsController.ResourceReportString(faction, FactionResource.Influence), true);
-            this.operationInfoText.SetText(GeneralControlsController.ResourceReportString(faction, FactionResource.Operations), true);
-            this.boostInfoText.SetText(GeneralControlsController.ResourceReportString(faction, FactionResource.Boost), true);
-            this.researchInfoText.SetText(GeneralControlsController.ResourceReportString(faction, FactionResource.Research), true);
-            this.missionControlInfoText.SetText(GeneralControlsController.ResourceReportString(faction, FactionResource.MissionControl), true);
-            //this.magicInfoText.SetText(GeneralControlsController.ResourceReportString(faction, (FactionResource)patch_FactionResource.Magic), true);
-            this.controlPointMaintenanceText.SetText(GeneralControlsController.ControlPointMaintenanceString(faction), true);
-            bool unlockedSpaceResources = faction.UnlockedSpaceResources;
-            bool unlockedAntimatter = faction.UnlockedAntimatter;
-            bool unlockedExotics = faction.UnlockedExotics;
-            this.waterPanel.gameObject.SetActive(unlockedSpaceResources);
-            this.volatilesPanel.gameObject.SetActive(unlockedSpaceResources);
-            this.baseMetalsPanel.gameObject.SetActive(unlockedSpaceResources);
-            this.nobleMetalsPanel.gameObject.SetActive(unlockedSpaceResources);
-            this.fissilesPanel.gameObject.SetActive(unlockedSpaceResources);
-            // this.MagicPanel.gameObject.SetActive(unlockedSpaceResources);
-            this.antimatterPanel.gameObject.SetActive(unlockedAntimatter);
-            this.exoticsPanel.gameObject.SetActive(unlockedExotics);
-            if (unlockedSpaceResources)
-            {
-                this.SetSpaceResourceValuesInBar(faction, FactionResource.Water, this.waterInfoText, this.waterPanel);
-                this.SetSpaceResourceValuesInBar(faction, FactionResource.Volatiles, this.volatilesInfoText, this.volatilesPanel);
-                this.SetSpaceResourceValuesInBar(faction, FactionResource.Metals, this.baseMetalsInfoText, this.baseMetalsPanel);
-                this.SetSpaceResourceValuesInBar(faction, FactionResource.NobleMetals, this.nobleMetalsInfoText, this.nobleMetalsPanel);
-                this.SetSpaceResourceValuesInBar(faction, FactionResource.Fissiles, this.fissilesInfoText, this.fissilesPanel);
-                //   this.SetSpaceResourceValuesInBar(faction, (FactionResource)patch_FactionResource.Magic, this.fissilesInfoText, this.fissilesPanel);
-            }
-            if (unlockedAntimatter)
-            {
-                this.SetSpaceResourceValuesInBar(faction, FactionResource.Antimatter, this.antimatterInfoText, this.antimatterPanel);
-            }
-            if (unlockedExotics)
-            {
-                this.SetSpaceResourceValuesInBar(faction, (FactionResource)patch_FactionResource.Magic, this.exoticsInfoText, this.exoticsPanel);
-            }
-        }
-        private void SetSpaceResourceValuesInBar(TIFactionState faction, FactionResource resourceType, TMP_Text reportText, Transform panel)
-        {
-            if ((float)Screen.width / (float)Screen.height >= 1.5f)
-            {
-                panel.gameObject.GetComponent<LayoutElement>().preferredWidth = 105f;
-                reportText.SetText(GeneralControlsController.ResourceReportString(faction, resourceType), true);
-                return;
-            }
-            panel.gameObject.GetComponent<LayoutElement>().preferredWidth = 65f;
-            float currentResourceAmount = faction.GetCurrentResourceAmount(resourceType);
-            if (resourceType == FactionResource.Antimatter)
-            {
-                reportText.SetText(TIUtilities.FormatBigOrSmallNumber((double)currentResourceAmount, 1, 7, 0, false), true);
-                return;
-            }
-            reportText.SetText(TIUtilities.FormatBigNumber((double)currentResourceAmount, 1), true);
-        }
-
-        private static bool showMonthlyIncomes
-        {
-            get
-            {
-                return GameControl.control.activePlayer.showMonthlyIncomesInTopBarAndIntel;
-            }
-        }
-
-        public static string ResourceReportString(TIFactionState faction, FactionResource resourceType)
-        {
-            string result = string.Empty;
-            switch (resourceType)
-            {
-                case FactionResource.Money:
-                case FactionResource.Influence:
-                case FactionResource.Operations:
-                case FactionResource.Boost:
-                case FactionResource.Water:
-                case FactionResource.Volatiles:
-                case FactionResource.Metals:
-                case FactionResource.NobleMetals:
-                case FactionResource.Fissiles:
-                case FactionResource.Exotics:
-                case (FactionResource)patch_FactionResource.Magic:
-                    {
-                        float num;
-                        if (patch_GeneralControlsController.showMonthlyIncomes)
-                        {
-                            num = faction.GetMonthlyIncome(resourceType, false, false);
-                        }
-                        else
-                        {
-                            num = faction.GetDailyIncome(resourceType, false, false);
-                        }
-                        float currentResourceAmount = faction.GetCurrentResourceAmount(resourceType);
-                        if (num == 0f)
-                        {
-                            result = TIUtilities.FormatBigOrSmallNumber((double)currentResourceAmount, 1, 7, 0, false);
-                        }
-                        else if (num > 0f)
-                        {
-                            result = Loc.T("UI.GeneralControls.ResourcesGain", new object[]
-                            {
-                        TIUtilities.FormatBigNumber((double)currentResourceAmount, 1),
-                        TIUtilities.FormatBigOrSmallNumber((double)num, 0, 2, 0, false)
-                            });
-                        }
-                        else if (num <= -0.01f)
-                        {
-                            result = Loc.T("UI.GeneralControls.ResourcesLoss", new object[]
-                            {
-                        TIUtilities.FormatBigNumber((double)currentResourceAmount, 1),
-                        TIUtilities.FormatBigOrSmallNumber((double)num, 0, 2, 0, false)
-                            });
-                        }
-                        else
-                        {
-                            result = Loc.T("UI.GeneralControls.ResourcesSmallLoss", new object[]
-                            {
-                        TIUtilities.FormatBigNumber((double)currentResourceAmount, 1),
-                        "0"
-                            });
-                        }
-                        break;
-                    }
-                case FactionResource.Research:
-                    {
-                        float num2;
-                        if (patch_GeneralControlsController.showMonthlyIncomes)
-                        {
-                            num2 = faction.GetMonthlyIncome(resourceType, false, false) * (1f + faction.BonusPctFromDistribution);
-                        }
-                        else
-                        {
-                            num2 = faction.GetDailyIncome(resourceType, false, false) * (1f + faction.BonusPctFromDistribution);
-                        }
-                        result = TIUtilities.FormatBigNumber((double)num2, 1);
-                        break;
-                    }
-                case FactionResource.Projects:
-                    result = faction.GetDailyIncome(resourceType, false, false).ToString("N0");
-                    break;
-                case FactionResource.MissionControl:
-                    {
-                        float dailyIncome = faction.GetDailyIncome(resourceType, false, false);
-                        float num3 = (float)faction.GetMissionControlUsage();
-                        if (num3 > dailyIncome)
-                        {
-                            result = Loc.T("UI.GeneralControls.ResourcesUsage", new object[]
-                            {
-                        new StringBuilder("<color=#EC2100>").Append(num3.ToString()).Append("</color>"),
-                        dailyIncome.ToString("N0")
-                            });
-                        }
-                        else
-                        {
-                            result = Loc.T("UI.GeneralControls.ResourcesUsage", new object[]
-                            {
-                        num3.ToString("N0"),
-                        dailyIncome.ToString("N0")
-                            });
-                        }
-                        break;
-                    }
-                case FactionResource.Antimatter:
-                    {
-                        float num4;
-                        if (patch_GeneralControlsController.showMonthlyIncomes)
-                        {
-                            num4 = faction.GetMonthlyIncome(resourceType, false, false);
-                        }
-                        else
-                        {
-                            num4 = faction.GetDailyIncome(resourceType, false, false);
-                        }
-                        float currentResourceAmount2 = faction.GetCurrentResourceAmount(resourceType);
-                        if (num4 == 0f)
-                        {
-                            result = TIUtilities.FormatBigOrSmallNumber((double)currentResourceAmount2, 1, 7, 0, true);
-                        }
-                        else if (num4 > 0f)
-                        {
-                            result = Loc.T("UI.GeneralControls.ResourcesGain", new object[]
-                            {
-                        TIUtilities.FormatBigOrSmallNumber((double)currentResourceAmount2, 1, 7, 0, true),
-                        TIUtilities.FormatBigOrSmallNumber((double)num4, 1, 7, 0, true)
-                            });
-                        }
-                        else if (num4 <= -1f)
-                        {
-                            result = Loc.T("UI.GeneralControls.ResourcesLoss", new object[]
-                            {
-                        TIUtilities.FormatBigOrSmallNumber((double)currentResourceAmount2, 1, 7, 0, true),
-                        Math.Truncate((double)num4).ToString("N0")
-                            });
-                        }
-                        else
-                        {
-                            result = Loc.T("UI.GeneralControls.ResourcesSmallLoss", new object[]
-                            {
-                        TIUtilities.FormatBigOrSmallNumber((double)currentResourceAmount2, 1, 7, 0, true),
-                        TIUtilities.FormatBigOrSmallNumber((double)num4, 1, 7, 0, true)
-                            });
-                        }
-                        break;
-                    }
-            }
-            return result;
-        }
-
-
     }
 
     [MonoModPatch("PavonisInteractive.TerraInvicta.CouncilorAugmentationOption")]

@@ -11,9 +11,128 @@ using static MonoMod.InlineRT.MonoModRule;
 namespace PavonisInteractive.TerraInvicta
 {
 
-    public class patch_TINotificationQueueState : TINotificationQueueState//use this?
+    public class patch_TINotificationQueueState : TINotificationQueueState
     {
+        public static void LogEtruscanFacilityDetected(TIFactionState detectingFaction, ConduitFacilityState alienFacility)//for custom facility markers
+        {
+            NotificationQueueItem notificationQueueItem = patch_TINotificationQueueState.InitItem(MethodBase.GetCurrentMethod().Name);
+            notificationQueueItem.relevantFactions.Add(detectingFaction);
+            notificationQueueItem.primaryFactions.Add(detectingFaction);
+            notificationQueueItem.icon = TemplateManager.global.pathGeoscapeAlienFacility_gui;
+            notificationQueueItem.popupResource1 = TemplateManager.global.pathGeoscapeAlienFacility_gui;
+            notificationQueueItem.popupResource2 = alienFacility.region.nation.flagResource;
+            notificationQueueItem.itemHeadline = Loc.T("UI.Notifications.XenoformHed", new object[]
+            {
+                alienFacility.region.displayName
+            });
+            notificationQueueItem.itemSummary = Loc.T("UI.Notifications.AlienFacilitySummary", new object[]
+            {
+                alienFacility.region.displayName,
+                alienFacility.region.nation.displayNameWithArticle
+            });
+            notificationQueueItem.itemDetail = Loc.T("UI.Notifications.AlienFacilityDetail", new object[]
+            {
+                alienFacility.region.displayName,
+                alienFacility.region.nation.displayNameWithArticle
+            });
+            notificationQueueItem.illustrationResource = TemplateManager.global.illus_alienFacilityBombed;
+            notificationQueueItem.musicIntensityDelta = 0.45f;
+            notificationQueueItem.gotoGameState = alienFacility;
+            notificationQueueItem.soundToPlay = "event:/SFX/UI_Special_SFX/trig_SFX_Aliens_Sighted_Earth";
+            patch_TINotificationQueueState.AddItem(notificationQueueItem, true);
+        }
 
+        public static void LogTechComplete(TIFactionState winningFaction, TITechTemplate techTemplate, int slot, float Investment, bool cheat = false)//Updated Tech result to show %
+        {
+            NotificationQueueItem notificationQueueItem = patch_TINotificationQueueState.InitItem(MethodBase.GetCurrentMethod().Name);
+            notificationQueueItem.alertBlockFaction = winningFaction;
+            notificationQueueItem.relevantFactions.Add(winningFaction);
+            float Winnerinvestment = Investment;
+            float Chance = (Winnerinvestment / techTemplate.researchCost) * 100;
+            notificationQueueItem.itemHeadline = Loc.T("UI.Notifications.ResearchCompleteHed", new object[]
+            {
+                techTemplate.displayName
+            });
+            notificationQueueItem.itemSummary = Loc.T("UI.Notifications.ResearchCompleteSummary", new object[]
+            {
+                TIUtilities.HighlightLine(techTemplate.displayName)
+            });
+            notificationQueueItem.itemDetail = Loc.T("UI.Notifications.ResearchCompleteDetailPromptTEST", new object[]
+            {
+                TIUtilities.HighlightLine(techTemplate.displayName),
+                winningFaction.displayNameCapitalizedWithColor,
+                TemplateManager.global.researchInlineSpritePath,
+                techTemplate.GetFullDescription(GameControl.control.activePlayer, TechBenefitsContext.JustCompleted, null, false),
+                Chance
+            });
+            notificationQueueItem.icon = techTemplate.IconResource;
+            notificationQueueItem.popupResource1 = techTemplate.IconResource;
+            if (!cheat || TIGlobalResearchState.CurrentResearchingTechs.Contains(techTemplate))
+            {
+                notificationQueueItem.alertBlockEventName = "PromptSelectTech";
+                notificationQueueItem.utilityValue = slot;
+            }
+            notificationQueueItem.illustrationResource = techTemplate.GetCompletedIllustrationPath();
+            notificationQueueItem.promptingGameState = GameStateManager.GlobalResearch();
+            notificationQueueItem.gotoGameState = GameStateManager.GlobalResearch();
+            if (!techTemplate.endGameTech)
+            {
+                notificationQueueItem.soundToPlay = new StringBuilder("event:/VO/ENG/Faction/TechQuote_").Append(techTemplate.dataName).ToString();
+            }
+            notificationQueueItem.customButtonTemplateName = techTemplate.dataName;
+            if (techTemplate.SpaceExplorationTech())
+            {
+                notificationQueueItem.notificationDelegates.Add(SpecialNotificationDelegate.LaunchAllProbes);
+            }
+            patch_TINotificationQueueState.AddItem(notificationQueueItem, false);
+        }
+
+   
+        public static void LogTechCompleteAndNewTechSelected(TIFactionState winningFaction, TITechTemplate oldTechTemplate, TITechTemplate newTechTemplate, float Investment)//Updated Tech result to show %
+        {
+            NotificationQueueItem notificationQueueItem = patch_TINotificationQueueState.InitItem(MethodBase.GetCurrentMethod().Name);
+            notificationQueueItem.primaryFactions = patch_TINotificationQueueState.AllFactions;
+            notificationQueueItem.primaryFactions.Remove(winningFaction);
+            notificationQueueItem.relevantFactions = new List<TIFactionState>(notificationQueueItem.primaryFactions);
+            float TotalTechCost = oldTechTemplate.researchCost;
+            float Winnerinvestment = Investment;
+            float Chance = (Winnerinvestment / TotalTechCost)*100;
+            notificationQueueItem.itemHeadline = Loc.T("UI.Notifications.ResearchCompleteHed", new object[]
+            {
+                TIUtilities.HighlightLine(oldTechTemplate.displayName)
+            });
+            notificationQueueItem.itemSummary = Loc.T("UI.Notifications.ResearchCompleteSummary", new object[]
+            {
+                TIUtilities.HighlightLine(oldTechTemplate.displayName)
+            });
+            notificationQueueItem.itemDetail = Loc.T("UI.Notifications.ResearchCompleteDetailTEST", new object[]
+            {
+                TIUtilities.HighlightLine(oldTechTemplate.displayName),
+                winningFaction.displayNameCapitalizedWithColor,
+                TemplateManager.global.researchInlineSpritePath,
+                TIUtilities.HighlightLine(newTechTemplate.displayName),
+                oldTechTemplate.GetFullDescription(GameControl.control.activePlayer, TechBenefitsContext.JustCompleted, null, false),
+                Chance,
+            });
+            notificationQueueItem.icon = oldTechTemplate.IconResource;
+            notificationQueueItem.popupResource1 = winningFaction.factionIcon256path;
+            notificationQueueItem.popupResource2 = oldTechTemplate.IconResource;
+            notificationQueueItem.illustrationResource = oldTechTemplate.GetCompletedIllustrationPath();
+            notificationQueueItem.gotoGameState = GameStateManager.GlobalResearch();
+            if (!oldTechTemplate.endGameTech)
+            {
+                notificationQueueItem.soundToPlay = new StringBuilder("event:/VO/ENG/Faction/TechQuote_").Append(oldTechTemplate.dataName).ToString();
+            }
+            notificationQueueItem.customButtonTemplateName = oldTechTemplate.dataName;
+            if (oldTechTemplate.SpaceExplorationTech())
+            {
+                notificationQueueItem.notificationDelegates.Add(SpecialNotificationDelegate.LaunchAllProbes);
+            }
+            patch_TINotificationQueueState.AddItem(notificationQueueItem, false);
+        }
+        private static List<TIFactionState> AllFactions => GameStateManager.AllFactions().ToList<TIFactionState>();
+
+        //To prompt policy selection window based on mission name
         public static void LogMissionOutcome(TIMissionState mission, MissionResult result, TIFactionState heldTargetFaction, List<TIGameState> newControlPoints = null, List<TIGameState> oldControlPoints = null, bool spy = false, string abortedReason = "")
         {
             string text = MethodBase.GetCurrentMethod().Name;
@@ -238,7 +357,7 @@ namespace PavonisInteractive.TerraInvicta
                 notificationQueueItem.alertBlockEventName = "PromptSelectPolicy";
                 notificationQueueItem.alertRelatedState = councilor;
             }
-            if (mission.templateName == TIFactionState.goToGroundMission.dataName && flag)
+            if (mission.templateName == patch_TIFactionState.SetFactionPolicyMission.dataName && flag)
             {
                 notificationQueueItem.alertBlockFaction = faction;
                 notificationQueueItem.promptingGameState = mission.target.ref_nation;

@@ -31,13 +31,15 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Namespace\ResearchScreenController in Namespaces.cs" />
+    <Compile Include="Namespace\CustomMarkers in Namespaces.cs" />
+    <Compile Include="Namespace\GeneralControlsController in Namespaces.cs" />
+    <Compile Include="Namespace\ResearchPanelController in Namespaces.cs" />
     <Compile Include="Namespace\TiEffectsState in Namespace.cs" />
     <Compile Include="Namespace\TiGlobalValueState in Namespaces.cs" />
     <Compile Include="Namespace\TINotificationQueueState in Namespaces .cs" />
     <Compile Include="Solos\GovernmentPolicies.cs" />
     <Compile Include="Solos\Missions.cs" />
-    <Compile Include="Namespace\Notifications in Namespace.cs" />
+    <Compile Include="Namespace\Notifications in Namespaces.cs" />
     <Compile Include="factiongoal_nations.cs" />
     <Compile Include="Solos\TiGlobalConfig.cs" />
     <Compile Include="MapRegionTemplate.cs" />

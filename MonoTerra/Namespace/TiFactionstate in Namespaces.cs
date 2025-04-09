@@ -15,6 +15,7 @@ using PavonisInteractive.TerraInvicta.Entities;
 using PavonisInteractive.TerraInvicta.Systems;
 using PavonisInteractive.TerraInvicta.Systems.GameTime;
 using PavonisInteractive.TerraInvicta.Tasks;
+using Mono.Cecil;
 
 
 namespace FullSerializer.Internal
@@ -49,57 +50,68 @@ namespace FullSerializer.Internal
 
 namespace PavonisInteractive.TerraInvicta
 {
-    public class patch_TIHabState : TIHabState
+    //public class patch_TIHabState : TIHabState
+    //{
+    //    [fsIgnore]
+    //    private Dictionary<TIFactionState, Dictionary<patch_FactionResource, float>> netAnnualIncomes;
+    //    //public float GetAnnualResourceIncome(TIFactionState faction, patch_FactionResource resource)
+    //    //{
+    //    //    if (this.netAnnualIncomes.Keys.Contains(faction))
+    //    //    {
+    //    //        return this.netAnnualIncomes[faction][resource];
+    //    //    }
+    //    //    return 0f;
+    //    //}
+    //    public float GetAnnualNetResourceIncome(TIFactionState faction, patch_FactionResource resource)
+    //    {
+    //        if (this.netAnnualIncomes.Keys.Contains(faction))
+    //        {
+    //            return this.netAnnualIncomes[faction][resource];
+    //        }
+    //        return 0f;
+    //    }
+    //}
+
+    public class patch_AIDailyFactionPlanner : AIDailyFactionPlanner
     {
-        [fsIgnore]
-        private Dictionary<TIFactionState, Dictionary<patch_FactionResource, float>> netAnnualIncomes;
-        public float GetAnnualResourceIncome(TIFactionState faction, patch_FactionResource resource)
-        {
-            if (this.netAnnualIncomes.Keys.Contains(faction))
-            {
-                return this.netAnnualIncomes[faction][resource];
-            }
-            return 0f;
-        }
-    }
-
-
-    public class patch_TIFactionState : TIFactionState
-    {
-        public TIDateTime CouncilTimer = new TIDateTime();
-
-        public int CouncilMember = (int)patch_Context.CouncilMember;
-
-        public int InternationalTreatyType = (int)patch_Context.InternationalTreatyType;
-        public TIDateTime SetCouncilTimer(TIDateTime Now)
-        {
-            this.CouncilTimer = Now;
-            return CouncilTimer;
-        }
-        public static int JealousyAndDeescalation(TIFactionState faction, TIFactionState enemyFaction, bool generalDeescalation, bool processPeriodicChange)
+        public static float JealousyAndDeescalation(TIFactionState faction, TIFactionState enemyFaction, bool generalDeescalation, bool processPeriodicChange)
         {
             if (faction.permanentAlly(enemyFaction))
             {
-                return 0;
+                return 0f;
             }
-
-            int num = 0;
-            if (faction.mostPowerfulHumanEnemy != enemyFaction || generalDeescalation)
-            {
-                if (processPeriodicChange)
-                {
-                    faction.GainFactionHate(enemyFaction, -1f, false);
-                }
-                if (faction.mostPowerfulHumanEnemy != null && faction.mostPowerfulHumanEnemy == enemyFaction.mostPowerfulHumanEnemy)
-                {
-                    num--;
-                    if ((faction.proAlien && faction.mostPowerfulHumanEnemy.antiAlien) || (faction.antiAlien && faction.mostPowerfulHumanEnemy.proAlien))
-                    {
-                        num--;
-                    }
-                }
-            }
-
+            TIFactionState mostThreateningEnemyHumanFaction = faction.GetMostThreateningEnemyHumanFaction();
+            TIFactionState mostThreateningEnemyHumanFaction2 = enemyFaction.GetMostThreateningEnemyHumanFaction();
+            bool flag = enemyFaction.player.isAI || TINationState.GetIdeologicalDistance(faction.ideology, enemyFaction.ideology) >= TemplateManager.global.AI_GangUpOnLeaderBehavior_MinIdeologicalDistance_Difficulty();
+            float num = 0f;
+            if ((mostThreateningEnemyHumanFaction != enemyFaction || generalDeescalation) && (!enemyFaction.IsAlienFaction || !faction.veryAntiAlien))
+			{
+				if (processPeriodicChange)
+				{
+					float num2 = -1f;
+					if (faction.IsAlienFaction)
+					{
+						num2 *= 0.8f;
+						if (mostThreateningEnemyHumanFaction != enemyFaction && faction.enemyWarFactions.Count > 2)
+						{
+							num2 *= 1.5f;
+						}
+						if (enemyFaction.antiAlien)
+						{
+							num2 *= 0.8f;
+						}
+					}
+					faction.GainFactionHate(enemyFaction, num2, true, "Periodic hate");
+				}
+				if (mostThreateningEnemyHumanFaction != null && mostThreateningEnemyHumanFaction == mostThreateningEnemyHumanFaction2)
+				{
+					num -= (faction.IsAlienFaction ? 0.33f : 1f);
+					if ((faction.proAlien && mostThreateningEnemyHumanFaction.antiAlien) || (faction.antiAlien && mostThreateningEnemyHumanFaction.proAlien))
+					{
+						num -= 1f;
+					}
+				}
+			}   
             if (faction.HasNAP(enemyFaction))//if nap, reduce.
             {
                 faction.GainFactionHate(enemyFaction, -1f, false);
@@ -110,48 +122,341 @@ namespace PavonisInteractive.TerraInvicta
             {
                 faction.GainFactionHate(enemyFaction, unitydrift / 5, false);//This Should drift hate based on unity.
             }
-
             if (faction.IsAlienFaction && enemyFaction.isAlienAppeaser && enemyFaction.unlockedVictoryObjective)
             {
-                num -= 10;
+                num -= 10f;
             }
             else if (faction.isAlienAppeaser && enemyFaction.IsAlienFaction && faction.unlockedVictoryObjective)
             {
-                num -= 9999;
+                num -= 9999f;
             }
-            if (enemyFaction.player.isAI || TINationState.GetIdeologicalDistance(faction.ideology, enemyFaction.ideology) >= TemplateManager.global.AI_GangUpOnLeaderBehavior_MinIdeologicalDistance_Difficulty())
+            if (faction.IsAlienFaction && !enemyFaction.veryProAlien)
             {
-                if (faction.mostPowerfulHumanEnemy == enemyFaction)
+                float campaignDurationBeforeAlienTotalWar = TemplateManager.global.GetCampaignDurationBeforeAlienTotalWar();
+                float alienProgressionModifiedDuration_years_exact = TIGlobalValuesState.GetAlienProgressionModifiedDuration_years_exact();
+                float num3 = 0.9f * alienProgressionModifiedDuration_years_exact / (campaignDurationBeforeAlienTotalWar + 12f);
+                float num4 = 0f;
+                if (enemyFaction == mostThreateningEnemyHumanFaction)
+                {
+                    num4 += 1f;
+                }
+                if (enemyFaction.unlockedVictoryObjective)
+                {
+                    num4 += 0.5f;
+                }
+                if (enemyFaction.antiAlien)
+                {
+                    num4 += 0.1f;
+                }
+                if (enemyFaction.veryAntiAlien)
+                {
+                    num4 += 0.125f;
+                }
+                num += num4 * num3;
+            }
+            else if (flag)
+            {
+                if (mostThreateningEnemyHumanFaction == enemyFaction)
                 {
                     switch (faction.selfAssessement)
                     {
                         case FactionSelfAssessment.LosingBig:
-                            num += 3;
+                            num += 2.25f;
                             break;
                         case FactionSelfAssessment.Losing:
-                            num += 2;
+                            num += 1.75f;
                             break;
                         case FactionSelfAssessment.None:
-                            num++;
+                            num += 1f;
                             break;
                     }
                     if ((faction.veryProAlien && enemyFaction.veryAntiAlien) || (faction.veryAntiAlien && enemyFaction.veryProAlien))
                     {
-                        num += 2;
+                        num += 1.4f;
                     }
                     if ((faction.proAlien && enemyFaction.proAlien) || (faction.antiAlien && enemyFaction.antiAlien))
                     {
-                        num -= ((TITimeState.CampaignDuration_years_Exact() < 5f) ? 3 : 1);
+                        num -= ((TITimeState.CampaignDuration_years_Exact() < 7f) ? 3f : 0.75f);
                     }
-                    num = Mathf.Max(0, num);
+                    num = Mathf.Max(0f, num);
                 }
                 if (!faction.permanentAlly(enemyFaction) && enemyFaction.unlockedVictoryObjective)
                 {
-                    num++;
+                    num += 1f;
                 }
             }
             return num;
         }
+
+
+        public static void DisableOwnNations(TIFactionState faction, Dictionary<TIControlPoint, float> controlPointValues)//this controls AI willingess to disable nations
+        {
+            //float num = (faction.numActiveCouncilors == 0) ? 0f : ((float)TemplateManager.global.AI_BaseAllowedOverageCPMaintenance * (1.65f - faction.aiValues.riskAversion));
+            //if (faction.GetAnnualControlPointMaintenanceCost() > num)
+            //{
+            //    Dictionary<TINationState, float> NationCPValues = new Dictionary<TINationState, float>();
+            //    Func<TIArmyState, bool> <> 9__2;
+            //    Func<TIControlPoint, float> <> 9__3;
+            //    foreach (TINationState tinationState in faction.nationsWithMyControlPoints)
+            //    {
+            //        if (!tinationState.SignificantPower || faction.numActiveCouncilors <= 0)
+            //        {
+            //            if (!tinationState.FactionControlPoints(faction, true, false, true).All((TIControlPoint x) => x.benefitsDisabled))
+            //            {
+            //                if (tinationState.atWar)
+            //                {
+            //                    IEnumerable<TIArmyState> armies = tinationState.armies;
+            //                    Func<TIArmyState, bool> predicate;
+            //                    if ((predicate = <> 9__2) == null)
+            //                    {
+            //                        predicate = (<> 9__2 = ((TIArmyState x) => x.faction == faction));
+            //                    }
+            //                    if (armies.Count(predicate) > 0 && faction.numActiveCouncilors > 0)
+            //                    {
+            //                        continue;
+            //                    }
+            //                }
+            //                if (faction.GetDailyIncome(FactionResource.Influence, false, false) <= 0f || ((tinationState.numControlPoints < 3 || tinationState.perCapitaGDP <= 40000f) && (AIEvaluators.Abundant(faction, FactionResource.MissionControl, 0f, faction.AvailableMissionControlMinusFutureUsage > 0, 1f) || tinationState.GetFactionMissionControlFromNation(faction, false) <= 0f)))
+            //                {
+            //                    IEnumerable<TIControlPoint> source = tinationState.FactionControlPoints(faction, true, false, true);
+            //                    Func<TIControlPoint, float> selector;
+            //                    if ((selector = <> 9__3) == null)
+            //                    {
+            //                        selector = (<> 9__3 = ((TIControlPoint x) => controlPointValues[x]));
+            //                    }
+            //                    float num2 = source.Sum(selector);
+            //                    if (tinationState.executiveFaction == faction)
+            //                    {
+            //                        num2 *= (float)tinationState.numControlPoints_unclamped;
+            //                    }
+            //                    else
+            //                    {
+            //                        num2 *= 1f + (float)tinationState.NumNativeControlPoints / 2f;
+            //                    }
+            //                    List<TIFactionGoalState> list = faction.FindGoals(TIFactionGoalState.BenevolentNationManagementGoals, faction, tinationState, TIFactionState.GoalFilter.none, true);
+            //                    if (list.Count > 0)
+            //                    {
+            //                        num2 /= (float)list[0].importance;
+            //                    }
+            //                    else
+            //                    {
+            //                        List<TIFactionGoalState> list2 = faction.FindGoals(TIFactionGoalState.CaptureNationGoals, faction, tinationState, TIFactionState.GoalFilter.none, true);
+            //                        if (list2.Count > 0)
+            //                        {
+            //                            num2 /= (float)list2[0].importance;
+            //                        }
+            //                    }
+            //                    NationCPValues.Add(tinationState, num2);
+            //                }
+            //            }
+            //        }
+            //    }
+            //    foreach (TINationState nation in from x in NationCPValues.Keys
+            //                                     orderby NationCPValues[x]
+            //                                     select x)
+            //    {
+            //        faction.playerControl.StartAction(new SelfDisableControlPoints(faction, nation));
+            //        if (faction.GetAnnualControlPointMaintenanceCost() <= num)
+            //        {
+            //            break;
+            //        }
+            //    }
+            }
+    }
+        public class patch_TIFactionState : TIFactionState
+    {
+        public static TIMissionTemplate SetFactionPolicyMission => TemplateManager.Find<TIMissionTemplate>("SetFactionPolicy", false);
+        //public float GetYearlyIncomeFromHabs(FactionResource resourceType)//why doesnt checking for mine work?
+        //{
+        //    float num = 0f;
+        //    foreach (TIHabState tihabState in this.habs)
+        //    {
+        //        if (resourceType == FactionResource.Money || resourceType == FactionResource.Influence || resourceType == FactionResource.Operations || resourceType == FactionResource.Research || resourceType == FactionResource.Projects || resourceType == FactionResource.Boost || resourceType == FactionResource.MissionControl || resourceType == FactionResource.Water || resourceType == FactionResource.Volatiles || resourceType == FactionResource.Metals || resourceType == FactionResource.NobleMetals || resourceType == FactionResource.Fissiles || resourceType == FactionResource.Antimatter || resourceType == FactionResource.Exotics)
+        //        {
+        //            num += tihabState.GetAnnualNetResourceIncome(this, resourceType);
+        //        }
+        //    }
+        //    if (resourceType != FactionResource.Research)
+        //    {
+        //        if (resourceType == FactionResource.Boost)
+        //        {
+        //            num -= this.DailySpaceResourceShortage() * 365.2422f;
+        //        }
+        //    }
+        //    else
+        //    {
+        //        num += TIEffectsState.SumEffectsModifiers(Context.HabResearchProduction, this, num);
+        //    }
+        //    return 0;
+        //}
+        public extern GoalType orig_AI_GetPreferredManagementGoalForNation(TINationState nation);//this could be used to set up goaltypes for ai?
+        public GoalType AI_GetPreferredManagementGoalForNation(TINationState nation)
+        {
+            if (this.IsAlienFaction)
+            {
+                return GoalType.PillageNation;
+            }
+            return orig_AI_GetPreferredManagementGoalForNation(nation);
+        }
+
+
+
+            public void AlternativeSetIntel(patch_TIGameState intelTarget, float value, patch_TIGameState changeSource = null)//below sets intel for building
+        {
+            if (intelTarget == null)
+            {
+                return;
+            }
+            if (intelTarget.deleted)
+            {
+                if (this.intel.ContainsKey(intelTarget))
+                {
+                    this.intel.Remove(intelTarget);
+                }
+                if (this.highestIntel.ContainsKey(intelTarget))
+                {
+                    this.highestIntel.Remove(intelTarget);
+                }
+                return;
+            }
+            bool flag = false;
+            bool flag2 = false;
+            bool flag3 = intelTarget.isRegionXenoformingState && !intelTarget.ref_xenoforming.VisibleToFaction(this);
+            float num = 0f;
+            if (!this.intel.ContainsKey(intelTarget))
+            {
+                this.intel.Add(intelTarget, value);
+                if (!this.highestIntel.ContainsKey(intelTarget))
+                {
+                    this.highestIntel.Add(intelTarget, value);
+                }
+                if (value != 0f)
+                {
+                    flag = true;
+                    if (value > 0f)
+                    {
+                        flag2 = true;
+                    }
+                }
+                this.ProcessIntelChange(intelTarget);
+            }
+            else
+            {
+                num = this.intel[intelTarget];
+                this.intel[intelTarget] = value;
+                this.ProcessIntelChange(intelTarget);
+                if (this.intel[intelTarget] != num)
+                {
+                    flag = true;
+                    if (this.intel[intelTarget] > num && !intelTarget.archived)
+                    {
+                        flag2 = true;
+                    }
+                }
+            }
+
+            if (intelTarget.isRegionEtruscanEntity) //above default, setting intel for building
+            {
+                TIRegionEtruscanEntityState ref_regionAlienEntity = intelTarget.ref_regionEtruscanEntity;
+
+                    GameControl.eventManager.TriggerEvent(new Etruscan_RegionEntityUpdated(ref_regionAlienEntity, ref_regionAlienEntity.region), null, new object[]
+                    {
+                            ref_regionAlienEntity,
+                            ref_regionAlienEntity.region
+                    });
+
+                    this.MarkAlienSite(intelTarget.ref_region, null);
+                if (ref_regionAlienEntity.isRegionEtruscanFacility && num == 0f)
+                {
+                    ref_regionAlienEntity.ref_EtruscanFacility.SightedByFaction(this);
+                        return;
+                    }
+            }
+        }
+
+
+
+
+        private void ProcessIntelChange(TIGameState intelTarget)//unchanged, dependency to above
+        {
+            this.intel[intelTarget] = Mathf.Clamp(this.intel[intelTarget], 0f, 1f);
+            if (this.intel[intelTarget] > this.highestIntel[intelTarget])
+            {
+                this.highestIntel[intelTarget] = this.intel[intelTarget];
+            }
+            if (intelTarget.deleted || intelTarget.archived)
+            {
+                return;
+            }
+            if (intelTarget.isCouncilorState && intelTarget.ref_councilor.status == CouncilorStatus.Active)
+            {
+                TICouncilorState ref_councilor = intelTarget.ref_councilor;
+                bool flag = this.councilors.Contains(ref_councilor);
+                bool flag2 = ref_councilor.traits.Any((TITraitTemplate x) => x.specialTraitRule == SpecialTraitRule.LoyaltyMonitor);
+                if (flag || ref_councilor.detainingFaction == this || this.factionsCompromised.Contains(ref_councilor.faction) || (this.permanentAlly(ref_councilor.faction) && this.intel[ref_councilor] > TemplateManager.global.intelToSeeCouncilorBasicData))
+                {
+                    this.intel[ref_councilor] = Mathf.Max(this.intel[ref_councilor], TemplateManager.global.myCouncilorBaselineIntel);
+                }
+                if (ref_councilor.agentForFaction == this || (flag && flag2))
+                {
+                    this.intel[ref_councilor] = Mathf.Max(this.intel[ref_councilor], TemplateManager.global.intelToSeeCouncilorSecrets);
+                }
+                if (ref_councilor.ref_faction != null && this.GetIntel(ref_councilor.ref_faction) < this.intel[ref_councilor])
+                {
+                    this.SetIntel(ref_councilor.ref_faction, this.intel[ref_councilor], null);
+                }
+            }
+            else if (intelTarget.isSpaceAssetState)
+            {
+                float num;
+                if (intelTarget.ref_faction == this)
+                {
+                    num = (this.IsAlienFaction ? TemplateManager.global.alienMySpaceAssetBaselineIntel : TemplateManager.global.humanMySpaceAssetBaselineIntel);
+                }
+                else
+                {
+                    TIFactionState ref_faction = intelTarget.ref_faction;
+                    if (ref_faction != null && ref_faction.IsAlienFaction)
+                    {
+                        num = (this.IsAlienFaction ? TemplateManager.global.alienMySpaceAssetBaselineIntel : intelTarget.ref_spaceAsset.BaselineIntelOnAlienAsset(this));
+                    }
+                    else
+                    {
+                        num = TemplateManager.global.humanSpaceAssetBaselineIntel;
+                    }
+                }
+                if (this.intel[intelTarget] < num)
+                {
+                    this.intel[intelTarget] = Mathf.Max(this.intel[intelTarget], num);
+                }
+            }
+            foreach (patch_TIFactionState tifactionState in this.factionsCompromisingThisFaction)
+            {
+                if (this.CanShareIntelItemWithFaction(tifactionState, intelTarget))
+                {
+                    tifactionState.SetIntelIfValueHigher(intelTarget, this.GetIntel(intelTarget), null);
+                }
+            }
+            foreach (patch_TIFactionState tifactionState2 in this.factionsCompromised)
+            {
+                if (tifactionState2.intel.ContainsKey(intelTarget) && (!this.intel.ContainsKey(intelTarget) || this.intel[intelTarget] < tifactionState2.intel[intelTarget]) && tifactionState2.CanShareIntelItemWithFaction(this, intelTarget))
+                {
+                    this.intel[intelTarget] = tifactionState2.intel[intelTarget];
+                }
+            }
+        }
+
+        public TIDateTime CouncilTimer = new TIDateTime();
+
+        public int CouncilMember = (int)patch_Context.CouncilMember;
+
+        public int InternationalTreatyType = (int)patch_Context.InternationalTreatyType;
+        public TIDateTime SetCouncilTimer(TIDateTime Now)
+        {
+            this.CouncilTimer = Now;
+            return CouncilTimer;
+        }
+       
         public bool CanTradeNAP(TIFactionState otherFaction)//need to make it so more factions NAP, maybe get rid of jealousy mechanic all together
         {
             bool flag = this.HasNAP(otherFaction, true);
@@ -168,7 +473,7 @@ namespace PavonisInteractive.TerraInvicta
             {
                 if (flag && num < 0)
                 {
-                    value = "Cooperation";///Write alternatives for Nightmaremoon/Celerstia
+                    value = "Cooperation";//Write alternatives for Nightmaremoon/Daybreaker
                 }
                 if (flag && num < TemplateManager.global.factionHateConflictThreshold && num  >= 0)
                 {
@@ -211,7 +516,7 @@ namespace PavonisInteractive.TerraInvicta
             return result;
         }
 
-        public float MCBasedAlienHate(TIFactionState enemyFaction)
+        public float MCBasedAlienHate(TIFactionState enemyFaction)//This controls minimum hate for all factions? -50 means hate can range to -50 for non alien alingned.
         {
             if (this.IsAlienFaction && !enemyFaction.veryProAlien)
             {
@@ -248,13 +553,7 @@ namespace PavonisInteractive.TerraInvicta
         public Dictionary<patch_FactionResource, float> resourcesnew;
 
         public List<patch_FactionResource> resourceIncomeDeficiencies;
-        public Dictionary<patch_FactionResource, float> copyResources
-        {
-            get
-            {
-                return this.resources.ToDictionary((KeyValuePair<patch_FactionResource, float> x) => x.Key, (KeyValuePair<patch_FactionResource, float> x) => x.Value);
-            }
-        }
+        public Dictionary<patch_FactionResource, float> copyResources => this.resources.ToDictionary((KeyValuePair<patch_FactionResource, float> x) => x.Key, (KeyValuePair<patch_FactionResource, float> x) => x.Value);
         [SerializeField]
         private List<string> availableProjectNames;
         [SerializeField]
@@ -441,18 +740,18 @@ namespace PavonisInteractive.TerraInvicta
             }
            }
 
-        [SerializeField]
-        private Dictionary<patch_FactionResource, float> baseIncomes_year;
+        //[SerializeField]
+        //private Dictionary<patch_FactionResource, float> baseIncomes_year;
 
-        public float GetYearlyIncomeFromHQ(patch_FactionResource resourceType)
-        {
-            return this.baseIncomes_year[resourceType];
-        }
+        //public float GetYearlyIncomeFromHQ(patch_FactionResource resourceType)
+        //{
+        //    return this.baseIncomes_year[resourceType];
+        //}
 
-        public extern float orig_GetYearlyIncome(FactionResource resourceType, bool dontRecalculate = false, bool suppressFactionResourcesUpdatedEvent = false);
-        public float GetYearlyIncome(FactionResource resourceType, bool dontRecalculate = false, bool suppressFactionResourcesUpdatedEvent = false)
+        public extern float orig_GetYearlyIncome(FactionResource resourceType, bool dontRecalculate = false, bool suppressFactionResourcesUpdatedEvent = false, bool forceRecalculate = false);
+        public float GetYearlyIncome(FactionResource resourceType, bool dontRecalculate = false, bool suppressFactionResourcesUpdatedEvent = false, bool forceRecalculate = false)
         {
-            switch ((patch_FactionResource)resourceType)
+            switch ((patch_FactionResource)resourceType)// This code adds % modifiers to the net incomes of core resources. 
             {
                 case patch_FactionResource.Magic:
                     return 0f;
@@ -460,31 +759,57 @@ namespace PavonisInteractive.TerraInvicta
                 case (patch_FactionResource)FactionResource.Influence:
 
                     float num = TIEffectsState.SumEffectsModifiers((Context)patch_Context.InfluenceIncomeModifier, this, 0f);
-                    return orig_GetYearlyIncome(resourceType) * num;
-                
+                    float GrossI = (GetMonthlyGrossRevenue_ALT(resourceType) * 12) * num;
+                    float CelestiaTaxInfluence = 0f;
+                    if (this.InternationalTreatyType == 1 || this.InternationalTreatyType == 2)
+                    {
+                      CelestiaTaxInfluence = ((GetMonthlyGrossRevenue_ALT(resourceType) * 12) + GrossI) / 10 ;
+                    }
+                    return orig_GetYearlyIncome(resourceType) + GrossI - CelestiaTaxInfluence;
+
+
                 case (patch_FactionResource)FactionResource.Operations:
                     float num2 = TIEffectsState.SumEffectsModifiers((Context)patch_Context.OperationsIncomeModifier, this, 0f);
-                    return orig_GetYearlyIncome(resourceType) * num2;
+                    float GrossO = (GetMonthlyGrossRevenue_ALT(resourceType) * 12) * num2;
+                    float CelestiaTaxOperations = 0f;
+                    if (this.InternationalTreatyType == 3 || this.InternationalTreatyType == 2)
+                    {
+                        CelestiaTaxOperations = ((GetMonthlyGrossRevenue_ALT(resourceType) * 12) + GrossO) / 10;
+                    }
+                    return orig_GetYearlyIncome(resourceType) + GrossO - CelestiaTaxOperations;
              
                 case (patch_FactionResource)FactionResource.Money:
                     float num3 = TIEffectsState.SumEffectsModifiers((Context)patch_Context.MoneyIncomeModifier, this, 0f);
-                    return orig_GetYearlyIncome(resourceType) * num3;
-               
+                    float GrossM = (GetMonthlyGrossRevenue_ALT(resourceType) * 12)  * num3;
+                    float CelestiaTaxMoney = 0f;
+                    if (this.InternationalTreatyType == 3 || this.InternationalTreatyType == 2)
+                    {
+                        CelestiaTaxMoney = ((GetMonthlyGrossRevenue_ALT(resourceType) * 12) + GrossM) / 10;
+                    }
+                    return orig_GetYearlyIncome(resourceType) + GrossM - CelestiaTaxMoney;
+
                 case (patch_FactionResource)FactionResource.Research:
                     float num4 = TIEffectsState.SumEffectsModifiers((Context)patch_Context.ResearchIncomeModifier, this, 0f);
-                    return orig_GetYearlyIncome(resourceType) * num4;
+                    float GrossR = (GetMonthlyGrossRevenue_ALT(resourceType) * 12) * num4;
+                    return orig_GetYearlyIncome(resourceType) + GrossR;
 
                 default:
                     return orig_GetYearlyIncome(resourceType);
             }
         }
-        public bool UnlockedExotics
+        public float GetMonthlyGrossRevenue_ALT(FactionResource resource)//made a version without advisor bonus to avoid crash. minor issue
         {
-            get
+            if (resource == FactionResource.MissionControl)
             {
-                return true;
+                return (float)this.MissionControlIncome;
             }
+            float num = this.councilors.Sum((TICouncilorState x) => x.GetMonthlyIncome_PositiveOnly(resource));
+             float num2 = this.habs.Sum((TIHabState x) => x.GetMonthlyRevenue(resource));
+            return this.GetMonthlyIncomeFromHQ(resource) + this.GetMonthlyIncomeFromNations(resource, false) + num + this.GetMonthlyGrossRevenueFromShips(resource) + this.GetMonthlyTransferInFromResourceTransfers(resource, null) + this.GetYearlyIncomeFromExcessMissionControl(resource) / 12f;// + num2;
         }
+
+
+
         public bool UnlockedResource(FactionResource resource)
         {
             switch (resource)
@@ -511,88 +836,94 @@ namespace PavonisInteractive.TerraInvicta
             return false;
         }
 
-        public float GetCurrentResourceAmount(patch_FactionResource resourceType)
+        //public float GetCurrentResourceAmount(patch_FactionResource resourceType)
+        //{
+        //        if (!this.resources.ContainsKey(resourceType))
+        //    {
+        //        return 0f;
+        //    }
+        //    return this.resources[resourceType];
+        //}
+
+        public static readonly HashSet<FactionResource> resourcesAllowedToGoNegative = new HashSet<FactionResource> //Running a test on this,added two entries. Doesnt seem to do anything
         {
-                if (!this.resources.ContainsKey(resourceType))
-            {
-                return 0f;
-            }
-            return this.resources[resourceType];
-        }
+            FactionResource.Money,
+            FactionResource.Influence,
+            FactionResource.Operations,
+        };
 
-        public float AddToCurrentResource(float amountToAdd, patch_FactionResource resourceType, bool suppressFactionResourcesUpdatedEvent = false)
-        {
-            if (amountToAdd == 0f)
-            {
-                return this.GetCurrentResourceAmount(resourceType);
-            }
-            if (resourceType == (patch_FactionResource)FactionResource.Research)
-            {
-                if (amountToAdd < 0f)
-                {
-                    List<ProjectProgress> list = this.currentProjectProgress.ToList<ProjectProgress>();
-                    float num = -amountToAdd;
-                    float num3;
-                    for (float num2 = 0f; num2 < num; num2 += num3)
-                    {
-                        if (list.Count<ProjectProgress>() <= 0)
-                        {
-                            break;
-                        }
-                        ProjectProgress projectProgress = list.SelectRandomItem<ProjectProgress>();
-                        list.Remove(projectProgress);
-                        num3 = Mathf.Min(num - num2, projectProgress.accumulatedResearch);
-                        projectProgress.accumulatedResearch -= num3;
-                    }
-                }
-                else
-                {
-                    this.DistributeResearchToSlots(amountToAdd);
-                }
-                return 0f;
-            }
-            if (patch_TIFactionState.DontAccumulateResource(resourceType))
-            {
-                return 0f;
-            }
-            Dictionary<patch_FactionResource, float> dictionary = this.resources;
-            dictionary[resourceType] += amountToAdd;
-            if (this.resources[resourceType] < 0f && !patch_TIFactionState.ResourceCanGoNegative(resourceType))
-            {
-                this.resources[resourceType] = 0f;
-            }
-            if (!suppressFactionResourcesUpdatedEvent)
-            {
-                GameControl.eventManager.TriggerEvent(new FactionResourcesUpdated(this), null, new object[]
-                {
-                    this
-                });
-            }
-            return this.resources[resourceType];
-        }
+        //public float AddToCurrentResource(float amountToAdd, patch_FactionResource resourceType, bool suppressFactionResourcesUpdatedEvent = false, string label = null)
+        //{
+        //    if (amountToAdd == 0f)
+        //    {
+        //        return this.GetCurrentResourceAmount(resourceType);
+        //    }
+        //    this.RecordTransaction(amountToAdd, resourceType, label);
+        //    if (resourceType == (patch_FactionResource)FactionResource.Research)
+        //    {
+        //        if (amountToAdd < 0f)
+        //        {
+        //            List<ProjectProgress> list = this.currentProjectProgress.ToList<ProjectProgress>();
+        //            float num = -amountToAdd;
+        //            float num3;
+        //            for (float num2 = 0f; num2 < num; num2 += num3)
+        //            {
+        //                if (list.Count<ProjectProgress>() <= 0)
+        //                {
+        //                    break;
+        //                }
+        //                ProjectProgress projectProgress = list.SelectRandomItem<ProjectProgress>();
+        //                list.Remove(projectProgress);
+        //                num3 = Mathf.Min(num - num2, projectProgress.accumulatedResearch);
+        //                projectProgress.accumulatedResearch -= num3;
+        //            }
+        //        }
+        //        else
+        //        {
+        //            this.DistributeResearchToSlots(amountToAdd);
+        //        }
+        //        return 0f;
+        //    }
+        //    if (TIFactionState.DontAccumulateResource(resourceType))
+        //    {
+        //        return 0f;
+        //    }
+        //    Dictionary<FactionResource, float> dictionary = this.resources;
+        //    dictionary[resourceType] += amountToAdd;
+        //    if (this.resources[resourceType] < 0f && !TIFactionState.ResourceCanGoNegative(resourceType))
+        //    {
+        //        this.resources[resourceType] = 0f;
+        //    }
+        //    if (!suppressFactionResourcesUpdatedEvent)
+        //    {
+        //        GameControl.eventManager.TriggerEvent(new FactionResourcesUpdated(this), null, new object[]
+        //        {
+        //            this
+        //        });
+        //    }
+        //    return this.resources[resourceType];
+        //}
 
-        public static bool DontAccumulateResource(patch_FactionResource resourceType)
-        {
-            return patch_TIResourcesCost.unAccumulatableResources.Contains(resourceType);
-        }
+        //public static bool DontAccumulateResource(patch_FactionResource resourceType)
+        //{
+        //    return patch_TIResourcesCost.unAccumulatableResources.Contains(resourceType);
+        //}
 
-        public static bool ResourceCanGoNegative(patch_FactionResource resourceType)
-        {
-            return patch_TIResourcesCost.resourcesAllowedToGoNegative.Contains(resourceType);
-        }
+        //public static bool ResourceCanGoNegative(patch_FactionResource resourceType)
+        //{
+        //    return patch_TIResourcesCost.resourcesAllowedToGoNegative.Contains(resourceType);
+        //}
 
+        //private Dictionary<TechCategory, int> traitsMultiplierCachedFrame = Enums.TechCategories.ToDictionary((TechCategory x) => x, (TechCategory x) => -1);
 
-
-        private Dictionary<TechCategory, int> traitsMultiplierCachedFrame = Enums.TechCategories.ToDictionary((TechCategory x) => x, (TechCategory x) => -1);
-
-        private Dictionary<TechCategory, float> cachedTraitsMultiplier = new Dictionary<TechCategory, float>();
+        //private Dictionary<TechCategory, float> cachedTraitsMultiplier = new Dictionary<TechCategory, float>();
 
         private Dictionary<TechCategory, float> cachedFleetsModifier = new Dictionary<TechCategory, float>();
 
 
         private Dictionary<TechCategory, int> fleetsModifierCachedFrame = Enums.TechCategories.ToDictionary((TechCategory x) => x, (TechCategory x) => -1);
 
-        public float TraitsMultiplier2(TechCategory techCategory)
+        public float TraitsMultiplier2(TechCategory techCategory)//Copies to standin for MagicTechnology
         {
             if (this.fleetsModifierCachedFrame[TechCategory.Xenology] != Time.frameCount)
             {
@@ -659,120 +990,127 @@ namespace PavonisInteractive.TerraInvicta
         {
             switch (category)
             {
-                case (TechCategory)patch_TechCategory.MagicScience:
-                    //Log.Debug($"{category}");
-                    //Log.Debug($"2-{(TechCategory)patch_TechCategory.MagicScience}");
+                case (TechCategory)patch_TechCategory.MagicScience://This highjacks fleet modifiers for Lifescience and Xenology to use as standings for org and trait multipliers for MagicScience.
                     return this.HabsMultiplier(category) + this.TraitsMultiplier2((TechCategory)patch_TechCategory.MagicScience) + OrgsMultiplier2((TechCategory)patch_TechCategory.MagicScience);
 
                 case TechCategory.SpaceScience:
                     return this.HabsMultiplier(category) + this.OrgsMultiplier(category) + this.TraitsMultiplier(category) + this.InvestigationsModifier(category) + this.FleetsModifier(category);
-                default:
-                // Log.Debug($"default  -  {category}");
-                    return this.HabsMultiplier(category) + this.OrgsMultiplier(category) + this.TraitsMultiplier(category) + this.InvestigationsModifier(category);
+                default://Takes away fleet modifier bonuses to the catagories to not cause conflict with above.
+                    return this.HabsMultiplier(category) + this.OrgsMultiplier(category) + this.TraitsMultiplier(category) + this.InvestigationsModifier(category) + TreatyModifiers(category);
             }
         }
-
-        public extern float orig_TechCategoryValuation(TechCategory category);
-        public float TechCategoryValuation(TechCategory category)
+        public float TreatyModifiers(TechCategory techCategory)
         {
-            switch ((patch_TechCategory)category)
+            if (this.InternationalTreatyType == 3 && techCategory == TechCategory.MilitaryScience)
             {
-                case patch_TechCategory.MagicScience:
-                    return 0f;
-                default:
-                    return orig_TechCategoryValuation(category);
-            }
-        }
-
-        public bool GenerateRecruitableCouncilors(bool campaignStart = false) //is this used?
-        {
-            bool result = false;
-            if (this.availableCouncilors.Count > 1 && !campaignStart && this.IsActiveHumanFaction)
-            {
-                for (int i = this.availableCouncilors.Count - 1; i >= 0; i--)
-                {
-                    if (UnityEngine.Random.value * 100f < (float)this.availableCouncilors[i].age)
-                    {
-                        TICouncilorState ticouncilorState = this.availableCouncilors[i];
-                        this.availableCouncilors.Remove(ticouncilorState);
-                        if (ticouncilorState.template.randomized)
-                        {
-                            ticouncilorState.ArchiveState();
-                            GameStateManager.RemoveGameState<TICouncilorState>(ticouncilorState.ID, false);
-                        }
-                    }
-                }
-            }
-            if (this.maxRecruitableCandidates > 0)
-            {
-                int num = this.IsActiveHumanFaction ? UnityEngine.Random.Range(-2, 2) : 0;
-                for (int j = this.availableCouncilors.Count; j <= this.maxRecruitableCandidates + num; j++)
-                {
-                    List<TICouncilorState> list = new List<TICouncilorState>();
-                    foreach (TICouncilorState ticouncilorState2 in GameStateManager.IterateByClass<TICouncilorState>(false))
-                    {
-                        if (!ticouncilorState2.everBeenAvailable && !ticouncilorState2.template.debugOnly && string.IsNullOrEmpty(ticouncilorState2.template.debugStartingCouncil) && !ticouncilorState2.template.randomized && ticouncilorState2.age >= 14 && ticouncilorState2.age <= 85 && ticouncilorState2.template.allowedIdeologies.Contains(this.ideology.ideology))
-                        {
-                            list.Add(ticouncilorState2);
-                        }
-                    }
-                    if (UnityEngine.Random.value > TemplateManager.global.chanceCouncilorTemplate || list.Count == 0)
-                    {
-                        TICouncilorState ticouncilorState3 = GameStateManager.CreateNewGameState<TICouncilorState>();
-                        if (this.IsAlienFaction)
-                        {
-                            ticouncilorState3.InitWithTemplate(TemplateManager.Find<TICouncilorTemplate>("randomizedAlienCouncilor2", false));
-                        }
-                        else
-                        {
-                            ticouncilorState3.InitWithTemplate(TemplateManager.Find<TICouncilorTemplate>("randomizedCouncilor1", false));
-                        }
-                        if (this.availableCouncilors.None((TICouncilorState x) => x.HireRecruitCost(this).CanAfford(this, 1f, null, float.PositiveInfinity)))
-                        {
-                            IEnumerable<TICouncilorTypeTemplate> enumerable = from x in TemplateManager.GetAllTemplates<TICouncilorTypeTemplate>(true)
-                                                                              where x.affinities.Contains(this.ideology.ideology)
-                                                                              select x;
-                            if (enumerable.Count<TICouncilorTypeTemplate>() > 0)
-                            {
-                                ticouncilorState3.NewCharacterGeneration(enumerable.SelectRandomItem<TICouncilorTypeTemplate>(), null, (this.IsAlienFaction || campaignStart) ? null : this, false, false);
-                            }
-                        }
-                        else
-                        {
-                            ticouncilorState3.NewCharacterGeneration(null, null, (this.IsAlienFaction || campaignStart) ? null : this, false, false);
-                        }
-                        this.availableCouncilors.Add(ticouncilorState3);
-                        result = true;
-                    }
-                    else
-                    {
-                        int index = UnityEngine.Random.Range(0, list.Count);
-                        this.availableCouncilors.Add(list[index]);
-                        result = true;
-                        list[index].everBeenAvailable = true;
-                    }
-                }
-            }
-            return result;
-        }
-
-
-        public List<TICouncilorState> advisingCouncilors { get; private set; }
-        public void AddAdvisingCouncilor(TICouncilorState councilor)
-        {
-            this.advisingCouncilors.Add(councilor);
-        }
-        public float GetAdvisers()
-        {
-            if (this.advisingCouncilors.Count > 0)
-            {
-                float num = this.advisingCouncilors.Count;
-                return num;
+                return 0.2f;
             }
             return 0f;
         }
+        //public extern float orig_TechCategoryValuation(TechCategory category);//this just zeros it out but it might not even be needed.
+        //public float TechCategoryValuation(TechCategory category)
+        //{
+        //    switch ((patch_TechCategory)category)
+        //    {
+        //        case patch_TechCategory.MagicScience:
+        //            return 0f;
+        //        default:
+        //            return orig_TechCategoryValuation(category);
+        //    }
+        //}
 
-        public float GetControlPointMaintenanceFreebieCap()
+        //public bool GenerateRecruitableCouncilors(bool campaignStart = false) //is this used?
+        //{
+        //    bool result = false;
+        //    if (this.availableCouncilors.Count > 1 && !campaignStart && this.IsActiveHumanFaction)
+        //    {
+        //        for (int i = this.availableCouncilors.Count - 1; i >= 0; i--)
+        //        {
+        //            if (UnityEngine.Random.value * 100f < (float)this.availableCouncilors[i].age)
+        //            {
+        //                TICouncilorState ticouncilorState = this.availableCouncilors[i];
+        //                this.availableCouncilors.Remove(ticouncilorState);
+        //                if (ticouncilorState.template.randomized)
+        //                {
+        //                    ticouncilorState.ArchiveState();
+        //                    GameStateManager.RemoveGameState<TICouncilorState>(ticouncilorState.ID, false);
+        //                }
+        //            }
+        //        }
+        //    }
+        //    if (this.maxRecruitableCandidates > 0)
+        //    {
+        //        int num = this.IsActiveHumanFaction ? UnityEngine.Random.Range(-2, 2) : 0;
+        //        for (int j = this.availableCouncilors.Count; j <= this.maxRecruitableCandidates + num; j++)
+        //        {
+        //            List<TICouncilorState> list = new List<TICouncilorState>();
+        //            foreach (TICouncilorState ticouncilorState2 in GameStateManager.IterateByClass<TICouncilorState>(false))
+        //            {
+        //                if (!ticouncilorState2.everBeenAvailable && !ticouncilorState2.template.debugOnly && string.IsNullOrEmpty(ticouncilorState2.template.debugStartingCouncil) && !ticouncilorState2.template.randomized && ticouncilorState2.age >= 14 && ticouncilorState2.age <= 85 && ticouncilorState2.template.allowedIdeologies.Contains(this.ideology.ideology))
+        //                {
+        //                    list.Add(ticouncilorState2);
+        //                }
+        //            }
+        //            if (UnityEngine.Random.value > TemplateManager.global.chanceCouncilorTemplate || list.Count == 0)
+        //            {
+        //                TICouncilorState ticouncilorState3 = GameStateManager.CreateNewGameState<TICouncilorState>();
+        //                if (this.IsAlienFaction)
+        //                {
+        //                    ticouncilorState3.InitWithTemplate(TemplateManager.Find<TICouncilorTemplate>("randomizedAlienCouncilor2", false));
+        //                }
+        //                else
+        //                {
+        //                    ticouncilorState3.InitWithTemplate(TemplateManager.Find<TICouncilorTemplate>("randomizedCouncilor1", false));
+        //                }
+        //                if (this.availableCouncilors.None((TICouncilorState x) => x.HireRecruitCost(this).CanAfford(this, 1f, null, float.PositiveInfinity)))
+        //                {
+        //                    IEnumerable<TICouncilorTypeTemplate> enumerable = from x in TemplateManager.GetAllTemplates<TICouncilorTypeTemplate>(true)
+        //                                                                      where x.affinities.Contains(this.ideology.ideology)
+        //                                                                      select x;
+        //                    if (enumerable.Count<TICouncilorTypeTemplate>() > 0)
+        //                    {
+        //                        ticouncilorState3.NewCharacterGeneration(enumerable.SelectRandomItem<TICouncilorTypeTemplate>(), null, (this.IsAlienFaction || campaignStart) ? null : this, false, false);
+        //                    }
+        //                }
+        //                else
+        //                {
+        //                    ticouncilorState3.NewCharacterGeneration(null, null, (this.IsAlienFaction || campaignStart) ? null : this, false, false);
+        //                }
+        //                this.availableCouncilors.Add(ticouncilorState3);
+        //                result = true;
+        //            }
+        //            else
+        //            {
+        //                int index = UnityEngine.Random.Range(0, list.Count);
+        //                this.availableCouncilors.Add(list[index]);
+        //                result = true;
+        //                list[index].everBeenAvailable = true;
+        //            }
+        //        }
+        //    }
+        //    return result;
+        //}
+
+
+        //public List<TICouncilorState> advisingCouncilors { get; private set; }//I might not need these, not sure why they are here.
+        //public void AddAdvisingCouncilor(TICouncilorState councilor)
+        //{
+        //    this.advisingCouncilors.Add(councilor);
+        //}
+        //public float GetAdvisers()
+        //{
+        //    if (this.advisingCouncilors.Count > 0)
+        //    {
+        //        float num = this.advisingCouncilors.Count;
+        //        return num;
+        //    }
+        //    return 0f;
+        //}
+
+
+
+
+        public float GetControlPointMaintenanceFreebieCap()//Makes security add cap, not the other attributes.
         {
             if (!this.IsAlienFaction)
             {
@@ -780,7 +1118,7 @@ namespace PavonisInteractive.TerraInvicta
             }
             return 20000f;
         }
-        public new float GetNegativeMonthlyIncomeFromUnassignedOrgs(FactionResource resource)
+        public new float GetNegativeMonthlyIncomeFromUnassignedOrgs(FactionResource resource)//no negative income from unequiped orgs.
         {
             float num = 0f;
             foreach (TIOrgState tiorgState in this.unassignedOrgs)

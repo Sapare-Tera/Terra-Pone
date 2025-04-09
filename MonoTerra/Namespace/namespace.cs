@@ -32,36 +32,178 @@ using PavonisInteractive.TerraInvicta.Systems.UI;
 
 namespace PavonisInteractive.TerraInvicta
 {
-    //    public class patch_TIRegionAlienFacilityState : TIRegionAlienFacilityState
-    //{
-
-    //    public bool built { get; private set; }
-    //    public void BuildFacility()
-    //    {
-    //        this.built = true;
-    //        this.currentHP = 80f;
-    //        foreach (TIFactionState tifactionState in GameStateManager.AllFactions())
-    //        {
-    //            if (tifactionState.IsAlienProxy || tifactionState.IsAlienFaction)
-    //            {
-    //                tifactionState.SetIntel(this, 1f, null);
-    //            }
-    //            else
-    //            {
-    //                tifactionState.SetIntel(this, 0f, null);
-    //            }
-    //        }
-    //        base.region.ChangeOceanType((WorldOceanType)patch_WorldOceanType.Teleport);
-
-    //        GameControl.eventManager.TriggerEvent(new AlienRegionEntityUpdated(this, base.region), null, new object[]
-    //        {
-    //            base.region
-    //        });
-    //    }
-    //}
-
     public static class patch_TIUtilities
     {
+        public static void TriggerSelectionEvent(patch_TIGameState gameState)//testing
+        {
+            if (gameState.isSpaceFleetState)
+            {
+                GameControl.eventManager.TriggerEvent(new FleetSelectedEvent(gameState.ref_fleet), null, Array.Empty<object>());
+                return;
+            }
+            if (gameState.isHabState)
+            {
+                GameControl.eventManager.TriggerEvent(new HabSelectedEvent(gameState.ref_hab), null, Array.Empty<object>());
+                return;
+            }
+            if (gameState.isSpaceBodyState)
+            {
+                GameControl.eventManager.TriggerEvent(new SpaceBodySelectedEvent(gameState.ref_spaceBody), null, Array.Empty<object>());
+                return;
+            }
+            if (gameState.isLagrangePointState)
+            {
+                GameControl.eventManager.TriggerEvent(new LagrangePointSelectedEvent(gameState.ref_lagrangePoint), null, Array.Empty<object>());
+                return;
+            }
+            if (gameState.isHabSiteState)
+            {
+                GameControl.eventManager.TriggerEvent(new HabSiteSelectedEvent(gameState.ref_habSite), null, Array.Empty<object>());
+                return;
+            }
+            if (gameState.isSpaceShipState)
+            {
+                GameControl.eventManager.TriggerEvent(new ShipSelectedEvent(gameState.ref_ship), null, Array.Empty<object>());
+                return;
+            }
+            if (gameState.isArmyState)
+            {
+                GameControl.eventManager.TriggerEvent(new ArmyMapItemSelected(gameState.ref_army), null, Array.Empty<object>());
+                return;
+            }
+            if (gameState.isNationState)
+            {
+                TINationState ref_nation = gameState.ref_nation;
+                GameControl.eventManager.TriggerEvent(new RegionStateSelected(ref_nation.capital), null, new object[]
+                {
+                    ref_nation.capital
+                });
+                GameControl.eventManager.TriggerEvent(new NationStateSelected(ref_nation), null, new object[]
+                {
+                    ref_nation
+                });
+                return;
+            }
+            if (gameState.isCouncilorState)
+            {
+                TICouncilorState ref_councilor = gameState.ref_councilor;
+                if (GeneralControlsController.UIPlayerInTargetingMode)
+                {
+                    GameControl.eventManager.TriggerEvent(new CouncilorMapItemSelected(ref_councilor), null, CouncilorMapItemSelected.MakeSourceObjects(ref_councilor));
+                    return;
+                }
+                GameControl.eventManager.TriggerEvent(new CouncilorSelectedOffMap(ref_councilor), null, new object[]
+                {
+                    ref_councilor.ref_region
+                });
+                return;
+            }
+            else
+            {
+                if (gameState.isRegionState)
+                {
+                    GameControl.eventManager.TriggerEvent(new RegionStateSelected(gameState.ref_region), null, new object[]
+                    {
+                        gameState.ref_region
+                    });
+                    GameControl.eventManager.TriggerEvent(new NationStateSelected(gameState.ref_region.nation), null, new object[]
+                    {
+                        gameState.ref_region.nation
+                    });
+                    return;
+                }
+                if (gameState.isRegionSpaceFacility)
+                {
+                    GameControl.eventManager.TriggerEvent(new SpaceFacilityMapObjectSelected(gameState.ref_regionSpaceFacility), null, new object[]
+                    {
+                        gameState.ref_regionSpaceFacility
+                    });
+                    return;
+                }
+                if (gameState.isRegionAlienEntity)
+                {
+                    GameControl.eventManager.TriggerEvent(new AlienRegionMapEntitySelected(gameState.ref_regionAlienEntity), null, new object[]
+                    {
+                        gameState.ref_regionAlienEntity
+                    });
+                    if (gameState.isRegionAlienAsset)
+                    {
+                        GameControl.eventManager.TriggerEvent(new AlienAssetTargetSelected(gameState.ref_regionAlienAsset), null, new object[]
+                        {
+                            gameState.ref_regionAlienEntity
+                        });
+                    }
+                    return;
+                }
+                if (gameState.isRegionEtruscanEntity)
+                {
+                    GameControl.eventManager.TriggerEvent(new Etruscan_RegionMapEntitySelected(gameState.ref_regionEtruscanEntity), null, new object[]
+                    {
+                        gameState.ref_regionEtruscanEntity
+                    });
+                    if (gameState.isRegionEtruscanAsset)
+                    {
+                        GameControl.eventManager.TriggerEvent(new Etruscan_AssetTargetSelected(gameState.ref_regionEtruscanAsset), null, new object[]
+                        {
+                            gameState.ref_regionEtruscanEntity
+                        });
+                    }
+                    return;
+                }
+                if (gameState.isControlPointState)
+                {
+                    GameControl.eventManager.TriggerEvent(new ControlPointTargetSelected(gameState.ref_controlPoint), null, new object[]
+                    {
+                        gameState.ref_region,
+                        gameState.ref_nation
+                    });
+                    return;
+                }
+                if (gameState.ref_region != null)
+                {
+                    GameControl.eventManager.TriggerEvent(new RegionStateSelected(gameState.ref_region), null, new object[]
+                    {
+                        gameState.ref_region
+                    });
+                    GameControl.eventManager.TriggerEvent(new NationStateSelected(gameState.ref_region.nation), null, new object[]
+                    {
+                        gameState.ref_region.nation
+                    });
+                    return;
+                }
+                return;
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         public static string PathResourceIcon(patch_FactionResource resource)
         {
             switch (resource)
@@ -405,21 +547,15 @@ namespace PavonisInteractive.TerraInvicta
 
     public static class patch_AIEvaluators
     {
-
-        public static float FixedResourceValue(patch_TIFactionState faction, patch_FactionResource resource, float value, bool scale)
-        {
-            return patch_AIEvaluators.EvaluateMonthlyResourceIncome(faction, resource, value) / (scale ? 12f : 1f);
-        }
-
-        public static float EvaluateMonthlyResourceIncome(patch_TIFactionState faction, patch_FactionResource resource, float value)
+        public static float EvaluateMonthlyResourceIncome(TIFactionState faction, FactionResource resource, float value)
         {
             float num = 0f;
             if (value != 0f)
             {
-                num = patch_AIEvaluators.AIRelativeValuationNEW[resource] * value * (faction.resourceIncomeDeficiencies.Contains(resource) ? 3f : 1f);
+                num = AIEvaluators.AIRelativeValuation[resource] * value * (faction.resourceIncomeDeficiencies.Contains(resource) ? 3f : 1f);
                 switch (resource)
                 {
-                    case (patch_FactionResource)FactionResource.Money:
+                    case FactionResource.Money:
                         if (value > 0f)
                         {
                             num *= faction.aiValues.gatherMoney;
@@ -429,25 +565,25 @@ namespace PavonisInteractive.TerraInvicta
                             num *= -num;
                         }
                         break;
-                    case (patch_FactionResource)FactionResource.Influence:
+                    case FactionResource.Influence:
                         num *= ((value > 0f) ? faction.aiValues.gatherInfluence : 1f);
                         break;
-                    case (patch_FactionResource)FactionResource.Operations:
-                        if (faction.currentlyCapturingHydra || faction.currentlyHuntingHydra)
+                    case FactionResource.Operations:
+                        if (faction.currentlySearchingForHydraCouncilor)
                         {
                             num *= 15f;
                         }
                         num *= ((value > 0f) ? faction.aiValues.gatherOps : 1f);
                         break;
-                    case (patch_FactionResource)FactionResource.Research:
-                    case (patch_FactionResource)FactionResource.Projects:
+                    case FactionResource.Research:
+                    case FactionResource.Projects:
                         if (faction.IsAlienFaction)
                         {
                             num = 0f;
                         }
                         num *= faction.aiValues.gatherScience;
                         break;
-                    case (patch_FactionResource)FactionResource.Boost:
+                    case FactionResource.Boost:
                         if (value > 0f)
                         {
                             num *= faction.aiValues.wantSpaceFacilities * faction.aiValues.wantSpaceWarCapability;
@@ -457,17 +593,17 @@ namespace PavonisInteractive.TerraInvicta
                             }
                         }
                         break;
-                    case (patch_FactionResource)FactionResource.MissionControl:
-                    case (patch_FactionResource)FactionResource.Water:
-                    case (patch_FactionResource)FactionResource.Volatiles:
-                    case (patch_FactionResource)FactionResource.Metals:
-                    case (patch_FactionResource)FactionResource.NobleMetals:
-                    case (patch_FactionResource)FactionResource.Fissiles:
-                    case (patch_FactionResource)FactionResource.Antimatter:
-                    case (patch_FactionResource)FactionResource.Exotics:
+                    case FactionResource.MissionControl:
+                    case FactionResource.Water:
+                    case FactionResource.Volatiles:
+                    case FactionResource.Metals:
+                    case FactionResource.NobleMetals:
+                    case FactionResource.Fissiles:
+                    case FactionResource.Antimatter:
+                    case FactionResource.Exotics:
                         num *= faction.aiValues.wantSpaceFacilities * faction.aiValues.wantSpaceWarCapability;
                         break;
-                    case patch_FactionResource.Magic:
+                    case (FactionResource)patch_FactionResource.Magic:
                         num *= 0;
                         break;
                 }
@@ -612,8 +748,106 @@ namespace PavonisInteractive.TerraInvicta
             return TICondition.PassesComparison(this.sign, TIGlobalValuesState.GlobalValues.earthAtmosphericN2O_ppm, TIUtilities.GetFloatValue(this.strValue));
         }
     }
+
     public class patch_TIGlobalResearchState : TIGlobalResearchState
     {
+        public float Test;
+        private List<FinishedTechData> finishedTechData = new List<FinishedTechData>();
+        public void AssignNewTechToSlot(TITechTemplate template, int slot)
+        {
+            TITechTemplate techTemplate = this.techProgress[slot].techTemplate;
+            this.techProgress[slot].techTemplateName = template.dataName;
+            FinishedTechData finishedTechData = default(FinishedTechData);
+            foreach (FinishedTechData finishedTechData2 in this.finishedTechData)
+            {
+                if (finishedTechData2.slot == slot)
+                {
+                    finishedTechData = finishedTechData2;
+                    break;
+                }
+            }
+            this.finishedTechData.Remove(finishedTechData);
+            if (finishedTechData.winningCouncil == null || techTemplate == null || template == null)
+            {
+                Log.Error("Nullage in AssignnewTechToSlot", Array.Empty<object>());
+                return;
+            }
+            this.techProgress[slot].selector = finishedTechData.winningCouncil;
+            float Investment = Test;
+            patch_TINotificationQueueState.LogTechCompleteAndNewTechSelected(finishedTechData.winningCouncil, techTemplate, template, Investment);
+        }
+
+        public void OnTechFinished(int slot)
+        {
+            TIFactionState tifactionState = this.Leader(slot);
+            FinishedTechData item = new FinishedTechData(slot, tifactionState);
+            this.finishedTechData.Add(item);
+            this.AddFinishedTech(this.techProgress[slot].techTemplate);
+            Test = this.techProgress[slot].factionContributions[tifactionState];
+            float Investment = Test;
+            patch_TINotificationQueueState.LogTechComplete(tifactionState, this.techProgress[slot].techTemplate, slot, Investment, false);
+
+            foreach (TIFactionState tifactionState2 in GameStateManager.AllHumanFactions().ToList<TIFactionState>().Shuffle<TIFactionState>())
+            {
+                tifactionState2.OnPublicTechCompleted(this.techProgress[slot].techTemplate, this.techProgress[slot].factionContributions.ContainsKey(tifactionState2) ? (this.techProgress[slot].factionContributions[tifactionState2] / this.techProgress[slot].accumulatedResearch) : 0f);
+                GameControl.eventManager.TriggerEvent(new ResearchUpdated(tifactionState2), null, new object[]
+                {
+                    tifactionState2
+                });
+            }
+            foreach (TIEffectTemplate effectTemplate in this.techProgress[slot].techTemplate.Effects)
+            {
+                TIEffectsState.AddEffect(effectTemplate, tifactionState, null, null);
+            }
+            foreach (TIFactionState tifactionState3 in GameStateManager.AllHumanFactions().ToList<TIFactionState>().Shuffle<TIFactionState>())
+            {
+                tifactionState3.OnPublicTechCompleted_PostEffectsApplied(this.techProgress[slot].techTemplate);
+            }
+            this.techProgress[slot].accumulatedResearch = 0f;
+            foreach (TIFactionState tifactionState4 in GameStateManager.AllHumanFactions())
+            {
+                this.techProgress[slot].factionContributions[tifactionState4] = 0f;
+                tifactionState4.EndTechRace();
+                tifactionState4.ClearPassiveTechSlot();
+            }
+            float num = this.finishedTechs.Sum((TITechTemplate x) => x.GetResearchCost(null));
+            float num2 = GameStateManager.AllHumanFactions().Sum((TIFactionState x) => x.completedProjects.Sum((TIProjectTemplate y) => y.GetResearchCost(x)));
+            TIHistoricalData.Record(this, "Total tech investment", num, 0f, true);
+            TIHistoricalData.Record(this, "Total project investment", num2, 0f, true);
+            TIHistoricalData.Record(this, "Total tech investment ratio", num / (num + num2), 0f, true);
+        }
+
+
+        private List<TITechTemplate> finishedTechs;
+        private void AddFinishedTech(TITechTemplate finishedTech)
+        {
+            if (finishedTech != null)
+            {
+                if (!this.finishedTechsNames.Contains(finishedTech.dataName))
+                {
+                    this.finishedTechsNames.Add(finishedTech.dataName);
+                }
+                if (!this.finishedTechs.Contains(finishedTech))
+                {
+                    this.finishedTechs.Add(finishedTech);
+                }
+                if (this.AllTechsFinished())
+                {
+                    GameControl.control.activePlayer.UnlockAchievement("researchAllTechs");
+                }
+            }
+        }
+        private bool AllTechsFinished()
+        {
+            List<TITechTemplate> list = (from x in TIGlobalResearchState.GetAllTechs()
+                                         where !x.endGameTech
+                                         select x).ToList<TITechTemplate>();
+            List<TITechTemplate> list2 = (from x in this.finishedTechs
+                                          where !x.endGameTech
+                                          select x).ToList<TITechTemplate>();
+            return list.Count == list2.Count;
+        }
+
         public new TIFactionState Leader(int slot)
         {
             TIFactionState ref_faction = this.ref_faction;
@@ -648,7 +882,6 @@ namespace PavonisInteractive.TerraInvicta
 
     public class patch_TIRegionXenoformingState : TIRegionXenoformingState 
     {
-
         private int spreadToAdjacentThreshold;
         public void DailyXenoformingGrowth()
     {

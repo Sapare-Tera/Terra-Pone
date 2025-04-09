@@ -35,15 +35,9 @@ namespace PavonisInteractive.TerraInvicta
         }
 
         public int nuclearStrikes { get; private set; }
-        public static patch_TIGlobalValuesState GlobalValues
-            {
-                get
-                {
-                    return (patch_TIGlobalValuesState)GameStateManager.GlobalValues();
-                }
-            }
+        public static patch_TIGlobalValuesState GlobalValues => (patch_TIGlobalValuesState)GameStateManager.GlobalValues();
 
-            public float stratosphericAerosols_ppm { get; private set; }
+        public float stratosphericAerosols_ppm { get; private set; }
             private GameTimeManager gameTime;
 
             public float GlobalCasualties { get; private set; }

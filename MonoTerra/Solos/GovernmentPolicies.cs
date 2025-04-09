@@ -17,41 +17,44 @@ public class patch_WarOption : WarOption
     {
         if (nationState.executiveFaction != null)
         {
-            patch_TIFactionState Faction = (patch_TIFactionState)nationState.executiveFaction;
-            if (Faction.InternationalTreatyType == 1)
-            { return false;
-            }
+            //patch_TIFactionState Faction = (patch_TIFactionState)nationState.executiveFaction;
+            //if (Faction.InternationalTreatyType == 1)
+            //{ return false;
+            //}
             return nationState.WarCapable && this.GetPossibleTargets(nationState).Count > 0 && Warcost.CanAffordWarOption(nationState.executiveFaction);
         }
         return nationState.WarCapable && this.GetPossibleTargets(nationState).Count > 0;
     }
-    public override void OnPassage(TINationState enactingNation, TIGameState policyTarget)
-    {
+
+	public override void OnPassage(TINationState enactingNation, TIGameState policyTarget)
+	{
+
+        Warcost.PayCostWarOption(enactingNation.executiveFaction);
+        patch_TIGlobalValuesState.GlobalValues.ReduceUnity(5);
+        enactingNation.DeclareFullWar(enactingNation.executiveFaction, policyTarget.ref_nation);
         if (policyTarget.isNationState)
-        {
-              Warcost.PayCostWarOption(enactingNation.executiveFaction);
-            patch_TIGlobalValuesState.GlobalValues.ReduceUnity(5);
-            enactingNation.DeclareFullWar(enactingNation.executiveFaction, policyTarget.ref_nation);
-            if (enactingNation.executiveFaction != null && enactingNation.executiveFaction.isActivePlayer)
-            {
-                enactingNation.executiveFaction.UnlockAchievement("declareWar");
-                return;
-            }
-        }
-        else if (policyTarget.isWarState)
-        {
-            TIWarState ref_War = policyTarget.ref_War;
-            if (enactingNation.CanJoinExistingWarAsAttacker(ref_War))
-            {
-                enactingNation.JoinWar(enactingNation.executiveFaction, ref_War.attacker, ref_War);
-                return;
-            }
-            if (enactingNation.CanJoinExistingWarAsDefender(ref_War))
-            {
-                enactingNation.JoinWar(enactingNation.executiveFaction, ref_War.defender, ref_War);
-            }
-        }
-    }
+		{
+			enactingNation.DeclareFullWar(enactingNation.executiveFaction, policyTarget.ref_nation);
+			if (enactingNation.executiveFaction != null && enactingNation.executiveFaction.isActivePlayer)
+			{
+				enactingNation.executiveFaction.UnlockAchievement("declareWar");
+				return;
+			}
+		}
+		else if (policyTarget.isWarState)
+		{
+			TIWarState ref_war = policyTarget.ref_war;
+			if (enactingNation.CanJoinExistingWarAsAttacker(ref_war))
+			{
+				enactingNation.JoinWar(enactingNation.executiveFaction, ref_war.attacker, ref_war);
+				return;
+			}
+			if (enactingNation.CanJoinExistingWarAsDefender(ref_war))
+			{
+				enactingNation.JoinWar(enactingNation.executiveFaction, ref_war.defender, ref_war);
+			}
+		}
+	}
     public override string GetConfirmPrompt(TINationState enactingNation, TIGameState target)
     {
         StringBuilder stringBuilder = new StringBuilder();
@@ -64,8 +67,8 @@ public class patch_WarOption : WarOption
             string text = TIUtilities.ConstructTextList(list, false, false);
             stringBuilder.Append(Loc.T(new StringBuilder(base.GetType().Name).Append(".confirmText").ToString(), new object[]
             {
-                 text + ". This will cost " + TIUtilities.InlineResourceStr(TIFactionState.setPolicyMission.cost.resourceType)+ ((Warcost.GetSingleCostValue(FactionResource.Influence) * TIGlobalValuesState.GlobalValues.earthAtmosphericCH4_ppm)/100 ),
-            }));;
+                text
+            }));
             List<TINationState> list2 = enactingNation.ProspectiveOffensiveAlliance(ref_nation, false);
             if (list2.Count > 0)
             {
@@ -91,20 +94,20 @@ public class patch_WarOption : WarOption
         }
         else
         {
-            TIWarState ref_War = target.ref_War;
+            TIWarState ref_war = target.ref_war;
             TINationState tinationState2;
-            if (ref_War.attackingAlliance.SelectMany((TINationState x) => x.allies).Contains(enactingNation))
+            if (ref_war.attackingAlliance.SelectMany((TINationState x) => x.allies).Contains(enactingNation))
             {
-                tinationState2 = ref_War.attacker;
+                tinationState2 = ref_war.attacker;
             }
             else
             {
-                tinationState2 = ref_War.defender;
+                tinationState2 = ref_war.defender;
             }
             stringBuilder.Append(Loc.T("WarOption.joinWarConfirmText", new object[]
             {
                 tinationState2.displayNameWithArticle,
-                ref_War.displayNameWithArticle
+                ref_war.displayNameWithArticle
             }));
         }
         return stringBuilder.ToString();
@@ -153,11 +156,11 @@ public class patch_JoinFederationOption : JoinFederationOption
         }); ;
     }
 }
-public class CancelOption2 : TIPolicyOption
+public class HarmonySwap : TIPolicyOption
 {
     public override PolicyType GetPolicyType()
     {
-        return (PolicyType)patch_PolicyType.CancelOption2;
+        return (PolicyType)patch_PolicyType.HarmonySwap;
     }
 
     public override bool Allowed(TINationState nationState)
@@ -201,6 +204,55 @@ public class CancelOption2 : TIPolicyOption
     }
 }
 
+public class GovernmentSwap : TIPolicyOption
+{
+    public override PolicyType GetPolicyType()
+    {
+        return (PolicyType)patch_PolicyType.GovernmentSwap;
+    }
+
+    public override bool Allowed(TINationState nationState)
+    {
+        return true;
+    }
+    public bool Faction = true;
+    public override string GetDescription()
+    {
+        return Loc.T(new StringBuilder(base.dataName).Append(".description").ToString(), new object[]
+        {
+            TIUtilities.InlineResourceStr(TIFactionState.setPolicyMission.cost.resourceType),
+            TIFactionState.setPolicyMission.cost.value
+        });
+    }
+    public override IList<TIGameState> GetPossibleTargets(TINationState policyTarget)
+    {
+        return null;
+    }
+
+    public override void OnPassage(TINationState enactingNation, TIGameState policyTarget)
+    {
+        TIFactionState executiveFaction = enactingNation.executiveFaction;
+        if (executiveFaction == null)
+        {
+            return;
+        }
+        //executiveFaction.AddToCurrentResource(TIFactionState.setPolicyMission.cost.value, TIFactionState.setPolicyMission.cost.resourceType, false);
+        patch_TINationState PatchNation = (patch_TINationState)enactingNation;
+        PatchNation.Government = !PatchNation.Government;
+    }
+
+    public override bool RequiresTargets()
+    {
+        return false;
+    }
+
+    public override int Importance(TINationState policyNation, TIGameState target)
+    {
+        return -10;
+    }
+}
+
+
 
 
 public class LeaveCouncil : TIPolicyOption
@@ -215,7 +267,7 @@ public class LeaveCouncil : TIPolicyOption
         if (nationState.executiveFaction != null)
         {
             patch_TIFactionState Faction = (patch_TIFactionState)nationState.executiveFaction;
-            return Faction.CouncilMember > 0 && Faction.CouncilMember < 2;
+            return Faction.CouncilMember > 0.5 && Faction.CouncilMember < 2;
         }
         return false;
     }
@@ -237,6 +289,103 @@ public class LeaveCouncil : TIPolicyOption
     {
         patch_TIFactionState executiveFaction = (patch_TIFactionState)enactingNation.executiveFaction;
         TIEffectsState.ProcessInstantEffect(executiveFaction, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.RemoveEffectFromFaction, 0f, 0f, "Effect_CouncilMemberSetter", null, null);
+
+        //Treaty1
+        TIEffectsState.ProcessInstantEffect(executiveFaction, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.RemoveEffectFromFaction, 0f, 0f, "Effect_InternationalTreaty1", null, null);
+        TIEffectsState.ProcessInstantEffect(executiveFaction, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.RemoveEffectFromFaction, 0f, 0f, "Effect_WelfarePriorityBonus25_Council", null, null);
+        TIEffectsState.ProcessInstantEffect(executiveFaction, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.RemoveEffectFromFaction, 0f, 0f, "Effect_KnowledgePriorityBonus25_Council", null, null);
+        TIEffectsState.ProcessInstantEffect(executiveFaction, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.RemoveEffectFromFaction, 0f, 0f, "Effect_EconomyPriorityBonus25_Council", null, null);
+        //Treaty2
+        TIEffectsState.ProcessInstantEffect(executiveFaction, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.RemoveEffectFromFaction, 0f, 0f, "Effect_InternationalTreaty2", null, null);
+        TIEffectsState.ProcessInstantEffect(executiveFaction, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.RemoveEffectFromFaction, 0f, 0f, "", null, null);
+        TIEffectsState.ProcessInstantEffect(executiveFaction, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.RemoveEffectFromFaction, 0f, 0f, "", null, null);
+        TIEffectsState.ProcessInstantEffect(executiveFaction, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.RemoveEffectFromFaction, 0f, 0f, "", null, null);
+        //Treaty3
+        TIEffectsState.ProcessInstantEffect(executiveFaction, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.RemoveEffectFromFaction, 0f, 0f, "Effect_InternationalTreaty3", null, null);
+        TIEffectsState.ProcessInstantEffect(executiveFaction, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.RemoveEffectFromFaction, 0f, 0f, "Effect_MilitaryPriorityBonus25_Council", null, null);
+        TIEffectsState.ProcessInstantEffect(executiveFaction, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.RemoveEffectFromFaction, 0f, 0f, "Effect_BuildArmyPriorityBonus25_Council", null, null);
+        TIEffectsState.ProcessInstantEffect(executiveFaction, EffectTargetType.SourceFaction, EffectSecondaryStateType.none, InstantEffect.RemoveEffectFromFaction, 0f, 0f, "Effect_NavyPriorityBonus25_Council", null, null);
+
+        TIEffectsState.AddEffect(TemplateManager.Find<TIEffectTemplate>("Effect_NOTCouncilMemberSetter", false), executiveFaction, null, null);
+    }
+
+    public override bool RequiresTargets()
+    {
+        return false;
+    }
+
+    public override int Importance(TINationState policyNation, TIGameState target)
+    {
+        return -10;
+    }
+}
+
+public class JoinCouncil : TIPolicyOption
+{
+    public override PolicyType GetPolicyType()
+    {
+        return (PolicyType)patch_PolicyType.JoinCouncil;
+    }
+
+    public override bool Allowed(TINationState nationState)
+    {
+        if (nationState.executiveFaction != null)
+        {
+            patch_TIFactionState Faction = (patch_TIFactionState)nationState.executiveFaction;
+            return Faction.CouncilMember < 1 && !(Faction.CouncilMember == 2) && Faction.CouncilMember > 0 ;
+        }
+        return false;
+    }
+    public bool Faction = true;
+    public override string GetDescription()
+    {
+        return Loc.T(new StringBuilder(base.dataName).Append(".description").ToString(), new object[]
+        {
+            TIUtilities.InlineResourceStr(TIFactionState.setPolicyMission.cost.resourceType),
+            TIFactionState.setPolicyMission.cost.value
+        });
+    }
+    public override IList<TIGameState> GetPossibleTargets(TINationState policyTarget)
+    {
+        return null;
+    }
+
+    public override void OnPassage(TINationState enactingNation, TIGameState policyTarget)
+    {
+        patch_TIFactionState executiveFaction = (patch_TIFactionState)enactingNation.executiveFaction;
+        TIEffectsState.AddEffect(TemplateManager.Find<TIEffectTemplate>("Effect_CouncilMemberSetter", false), executiveFaction, null, null);
+        int CurrentTreaty  = 0;
+        foreach (patch_TIFactionState enemyCouncil in GameStateManager.AllFactions())
+        {
+            if (enemyCouncil.ideology.dataName == "cooperate")
+            {
+                CurrentTreaty = enemyCouncil.InternationalTreatyType;
+            }
+        }
+
+            if (CurrentTreaty == 1)
+        {
+            TIEffectsState.AddEffect(TemplateManager.Find<TIEffectTemplate>("Effect_InternationalTreaty1", false), executiveFaction, null, null);
+            TIEffectsState.AddEffect(TemplateManager.Find<TIEffectTemplate>("Effect_WelfarePriorityBonus25_Council", false), executiveFaction, null, null);
+            TIEffectsState.AddEffect(TemplateManager.Find<TIEffectTemplate>("Effect_KnowledgePriorityBonus25_Council", false), executiveFaction, null, null);
+            TIEffectsState.AddEffect(TemplateManager.Find<TIEffectTemplate>("Effect_EconomyPriorityBonus25_Council", false), executiveFaction, null, null);
+        }
+
+        if (CurrentTreaty == 2)
+        {
+            TIEffectsState.AddEffect(TemplateManager.Find<TIEffectTemplate>("Effect_InternationalTreaty2", false), executiveFaction, null, null);
+            TIEffectsState.AddEffect(TemplateManager.Find<TIEffectTemplate>("Effect_WelfarePriorityBonus25_Council", false), executiveFaction, null, null);
+            TIEffectsState.AddEffect(TemplateManager.Find<TIEffectTemplate>("Effect_KnowledgePriorityBonus25_Council", false), executiveFaction, null, null);
+            TIEffectsState.AddEffect(TemplateManager.Find<TIEffectTemplate>("Effect_EconomyPriorityBonus25_Council", false), executiveFaction, null, null);
+        }
+
+        if (CurrentTreaty == 3)
+        {
+            TIEffectsState.AddEffect(TemplateManager.Find<TIEffectTemplate>("Effect_InternationalTreaty3", false), executiveFaction, null, null);
+            TIEffectsState.AddEffect(TemplateManager.Find<TIEffectTemplate>("Effect_MilitaryPriorityBonus25_Council", false), executiveFaction, null, null);
+            TIEffectsState.AddEffect(TemplateManager.Find<TIEffectTemplate>("Effect_BuildArmyPriorityBonus25_Council", false), executiveFaction, null, null);
+            TIEffectsState.AddEffect(TemplateManager.Find<TIEffectTemplate>("Effect_NavyPriorityBonus25_Council", false), executiveFaction, null, null);
+        }
     }
 
     public override bool RequiresTargets()

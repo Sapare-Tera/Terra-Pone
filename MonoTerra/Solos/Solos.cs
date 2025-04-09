@@ -870,6 +870,8 @@ public enum patch_Context : ushort
     MaxEquipedOrgs = 426,
     CouncilMember = 427,
     InternationalTreatyType = 428,
+    MagicModifier = 429,
+    Starter = 430,
 }
 
 public enum patch_WorldOceanType : ushort
@@ -884,8 +886,10 @@ public enum patch_DeploymentType : ushort
 
 public enum patch_PolicyType
 {
-   CancelOption2 = 420,
-   LeaveCouncil = 421
+   HarmonySwap = 420,
+   LeaveCouncil = 421,
+   JoinCouncil = 422,
+   GovernmentSwap = 423,
 }
 
 public enum patch_SpaceFacilityType//notused
@@ -914,8 +918,10 @@ public static class PolicyManager
         PolicyManager.policies.Add(PolicyType.DeclareIndependenceOption, new DeclareIndependenceOption());
         PolicyManager.policies.Add(PolicyType.EmployNuclearWeaponsOption, new EmployNuclearWeaponsOption());
         PolicyManager.policies.Add(PolicyType.CancelOption, new CancelOption());
-        PolicyManager.policies.Add((PolicyType)patch_PolicyType.CancelOption2, new CancelOption2());
+        PolicyManager.policies.Add((PolicyType)patch_PolicyType.HarmonySwap, new HarmonySwap());
         PolicyManager.policies.Add((PolicyType)patch_PolicyType.LeaveCouncil, new LeaveCouncil());
+        PolicyManager.policies.Add((PolicyType)patch_PolicyType.JoinCouncil, new JoinCouncil());
+        PolicyManager.policies.Add((PolicyType)patch_PolicyType.GovernmentSwap, new GovernmentSwap());
     }
     public static Dictionary<PolicyType, IPolicyOption> policies = new Dictionary<PolicyType, IPolicyOption>();
 }
